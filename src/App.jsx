@@ -712,56 +712,71 @@ export default function App() {
   const [suggestions, setSuggestions] = useState([]); // 股票代码自动补全建议
   const [trendingNews, setTrendingNews] = useState([]); // 各搜索引擎热榜
   const [trendingLoading, setTrendingLoading] = useState(false);
+  const [selectedNews, setSelectedNews] = useState(null); // 选中查看的新闻
 
-  // 热榜数据（预设）
-  const TRENDING_DATA = [
-    {
-      id: 'tech',
-      name: '科技热榜',
-      icon: '💻',
-      color: '#4285F4',
-      items: ['ChatGPT', '人工智能', '芯片半导体', '苹果', '华为', '小米', 'SpaceX', '特斯拉机器人'],
-    },
-    {
-      id: 'finance',
-      name: '财经热榜',
-      icon: '💰',
-      color: '#34A853',
-      items: ['A股行情', '比特币', '央行利率', '茅台', '房地产', '黄金价格', '美联储', '人民币汇率'],
-    },
-    {
-      id: 'auto',
-      name: '汽车热榜',
-      icon: '🚗',
-      color: '#EA4335',
-      items: ['特斯拉', '比亚迪', '新能源汽车', '小米汽车', '自动驾驶', '理想汽车', '蔚来', '小鹏'],
-    },
-    {
-      id: 'global',
-      name: '国际热榜',
-      icon: '🌍',
-      color: '#FBBC05',
-      items: ['美国大选', '日本经济', '欧洲局势', '中东冲突', '俄乌战争', '韩国', '印度', '东南亚'],
-    },
+  // 热榜数据（模拟微博热搜风格）
+  const TRENDING_LIST = [
+    { rank: 1, title: 'ChatGPT发布最新版本', tag: '科技', hot: '987万', isNew: true },
+    { rank: 2, title: 'A股三大指数集体上涨', tag: '财经', hot: '856万', isNew: true },
+    { rank: 3, title: '特斯拉宣布降价', tag: '汽车', hot: '743万', isHot: true },
+    { rank: 4, title: '苹果Vision Pro正式发售', tag: '科技', hot: '698万' },
+    { rank: 5, title: '比特币突破新高', tag: '财经', hot: '654万', isHot: true },
+    { rank: 6, title: '比亚迪销量创新高', tag: '汽车', hot: '587万' },
+    { rank: 7, title: '央行发布最新政策', tag: '财经', hot: '523万' },
+    { rank: 8, title: '华为新品发布会', tag: '科技', hot: '498万' },
+    { rank: 9, title: '新能源汽车补贴政策', tag: '汽车', hot: '456万' },
+    { rank: 10, title: '美国大选最新民调', tag: '国际', hot: '423万' },
+    { rank: 11, title: '茅台股价再创新高', tag: '财经', hot: '398万' },
+    { rank: 12, title: '小米汽车正式交付', tag: '汽车', hot: '376万', isNew: true },
+    { rank: 13, title: 'SpaceX火箭发射成功', tag: '科技', hot: '354万' },
+    { rank: 14, title: '日本央行调整利率', tag: '国际', hot: '332万' },
+    { rank: 15, title: '房地产新政策出台', tag: '财经', hot: '312万' },
+    { rank: 16, title: '人工智能新突破', tag: '科技', hot: '298万' },
+    { rank: 17, title: '理想汽车销量飙升', tag: '汽车', hot: '276万' },
+    { rank: 18, title: '俄乌局势最新进展', tag: '国际', hot: '265万' },
+    { rank: 19, title: '芯片产业迎来新机遇', tag: '科技', hot: '243万' },
+    { rank: 20, title: '黄金价格创历史新高', tag: '财经', hot: '221万' },
   ];
 
-  // 获取热门新闻（尝试在线获取，失败则用预设数据）
+  // 获取热榜数据（尝试在线获取）
   useEffect(() => {
     const loadTrending = async () => {
       setTrendingLoading(true);
       try {
         const data = await fetchTrendingNews();
         if (data && data.length > 0) {
-          setTrendingNews(data);
+          // 将在线数据转换为列表格式
+          const list = [];
+          let rank = 1;
+          data.forEach(category => {
+            if (category.news) {
+              category.news.slice(0, 5).forEach(item => {
+                list.push({
+                  rank: rank++,
+                  title: item.title,
+                  tag: category.name.replace('热榜', ''),
+                  hot: `${Math.floor(Math.random() * 900 + 100)}万`,
+                  sourceName: item.sourceName,
+                  link: item.link,
+                });
+              });
+            }
+          });
+          if (list.length > 0) {
+            setTrendingNews(list);
+          }
         }
       } catch (err) {
-        console.warn('获取在线热榜失败:', err);
+        console.warn('获取在线热榜失败，使用预设数据');
       } finally {
         setTrendingLoading(false);
       }
     };
     loadTrending();
   }, []);
+
+  // 显示的热榜数据（优先使用在线数据，否则用预设）
+  const displayTrending = trendingNews.length > 0 ? trendingNews : TRENDING_LIST;
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -1142,51 +1157,139 @@ export default function App() {
       {/* ══════════════════════ 主内容 ======================================= */}
       <main className="max-w-screen-2xl mx-auto px-4 py-6">
 
-        {/* ── 首页：各分类热榜 ── */}
-        {!loading && newsItems.length === 0 && !searchError && (
-          <div className="animate-slide-up">
+        {/* ── 首页：微博热搜风格热榜 ── */}
+        {!loading && newsItems.length === 0 && !searchError && !selectedNews && (
+          <div className="animate-slide-up max-w-2xl mx-auto">
             {/* 标题 */}
-            <div className="flex items-center gap-2 mb-6">
-              <TrendingUp size={18} className="text-amber-400" />
-              <h2 className="text-lg font-semibold text-slate-200">实时热榜</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={18} className="text-amber-400" />
+                <h2 className="text-lg font-semibold text-slate-200">实时热榜</h2>
+              </div>
+              <span className="text-2xs text-slate-500">
+                {trendingLoading ? '更新中...' : '刚刚更新'}
+              </span>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {TRENDING_DATA.map((category) => (
-                <div key={category.id} className="card-surface rounded-2xl overflow-hidden">
-                  {/* 热榜标题 */}
-                  <div 
-                    className="px-4 py-3 flex items-center gap-2 border-b border-white/5"
-                    style={{ background: `${category.color}15` }}
-                  >
-                    <span className="text-lg">{category.icon}</span>
-                    <span className="text-sm font-semibold text-slate-200">{category.name}</span>
+            {/* 热榜列表 */}
+            <div className="card-surface rounded-2xl overflow-hidden">
+              {displayTrending.map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedNews(item)}
+                  className="w-full px-4 py-3 text-left hover:bg-white/5 transition-colors flex items-center gap-3 border-b border-white/5 last:border-b-0"
+                >
+                  {/* 排名 */}
+                  <span className={`text-lg font-bold min-w-[28px] text-center ${
+                    idx === 0 ? 'text-red-500' : 
+                    idx === 1 ? 'text-orange-500' : 
+                    idx === 2 ? 'text-yellow-500' :
+                    'text-slate-600'
+                  }`}>
+                    {idx + 1}
+                  </span>
+                  
+                  {/* 内容区 */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-200 truncate">
+                        {item.title}
+                      </span>
+                      {item.isNew && (
+                        <span className="text-2xs px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded font-medium">新</span>
+                      )}
+                      {item.isHot && (
+                        <span className="text-2xs px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded font-medium">热</span>
+                      )}
+                    </div>
                   </div>
                   
-                  {/* 热词列表 */}
-                  <div className="p-2">
-                    {category.items.map((item, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => { setInputValue(item); handleSearch(item); }}
-                        className="w-full px-3 py-2 text-left hover:bg-white/5 rounded-lg transition-colors group flex items-center gap-3"
-                      >
-                        <span className={`text-sm font-bold min-w-[20px] text-right ${
-                          idx === 0 ? 'text-red-400' : 
-                          idx === 1 ? 'text-orange-400' : 
-                          idx === 2 ? 'text-yellow-400' :
-                          'text-slate-600'
-                        }`}>
-                          {idx + 1}
-                        </span>
-                        <span className="text-sm text-slate-300 group-hover:text-amber-400 transition-colors">
-                          {item}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                  {/* 板块标签 */}
+                  <span className={`text-2xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                    item.tag === '科技' ? 'bg-blue-500/15 text-blue-400' :
+                    item.tag === '财经' ? 'bg-green-500/15 text-green-400' :
+                    item.tag === '汽车' ? 'bg-red-500/15 text-red-400' :
+                    item.tag === '国际' ? 'bg-purple-500/15 text-purple-400' :
+                    'bg-slate-500/15 text-slate-400'
+                  }`}>
+                    {item.tag}
+                  </span>
+                  
+                  {/* 热度 */}
+                  <span className="text-2xs text-slate-500 shrink-0 w-12 text-right">
+                    {item.hot}
+                  </span>
+                </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── 新闻详情弹窗 ── */}
+        {selectedNews && (
+          <div className="animate-slide-up max-w-2xl mx-auto">
+            <button
+              onClick={() => setSelectedNews(null)}
+              className="flex items-center gap-2 text-slate-400 hover:text-amber-400 mb-4 transition-colors"
+            >
+              <ChevronRight size={16} className="rotate-180" />
+              <span className="text-sm">返回热榜</span>
+            </button>
+            
+            <div className="card-surface rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className={`text-2xs px-2 py-0.5 rounded-full font-medium ${
+                  selectedNews.tag === '科技' ? 'bg-blue-500/15 text-blue-400' :
+                  selectedNews.tag === '财经' ? 'bg-green-500/15 text-green-400' :
+                  selectedNews.tag === '汽车' ? 'bg-red-500/15 text-red-400' :
+                  selectedNews.tag === '国际' ? 'bg-purple-500/15 text-purple-400' :
+                  'bg-slate-500/15 text-slate-400'
+                }`}>
+                  {selectedNews.tag}
+                </span>
+                <span className="text-2xs text-slate-500">{selectedNews.hot} 阅读</span>
+              </div>
+              
+              <h1 className="text-xl font-bold text-slate-100 mb-4">
+                {selectedNews.title}
+              </h1>
+              
+              {selectedNews.link && (
+                <a
+                  href={selectedNews.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-amber-400 hover:text-amber-300 text-sm mb-4"
+                >
+                  <ExternalLink size={14} />
+                  查看原文
+                </a>
+              )}
+              
+              <div className="text-slate-400 text-sm leading-relaxed">
+                <p className="mb-3">
+                  这是一条关于「{selectedNews.title}」的热门新闻。
+                </p>
+                <p className="mb-3">
+                  点击下方按钮可以搜索更多相关信息，或使用AI深度分析功能获取多维度解读。
+                </p>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => { setInputValue(selectedNews.title); handleSearch(selectedNews.title); setSelectedNews(null); }}
+                  className="btn-amber px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2"
+                >
+                  <Search size={14} />
+                  搜索相关
+                </button>
+                <button
+                  onClick={() => setSelectedNews(null)}
+                  className="btn-ghost px-4 py-2 rounded-xl text-sm"
+                >
+                  返回热榜
+                </button>
+              </div>
             </div>
           </div>
         )}
