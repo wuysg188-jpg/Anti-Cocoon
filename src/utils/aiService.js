@@ -144,20 +144,6 @@ function clearOldestCache() {
     entries.slice(0, toRemove).forEach(e => localStorage.removeItem(e.key));
   } catch {}
 }
-}
-
-/**
- * 写入 LocalStorage 缓存
- * @param {string} key
- * @param {string} value
- */
-function writeCache(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // Storage full — silently fail
-  }
-}
 
 /**
  * 为新闻条目生成唯一 ID（基于链接或标题哈希）
