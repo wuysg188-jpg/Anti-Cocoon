@@ -710,7 +710,7 @@ export default function App() {
   const [sortBy, setSortBy] = useState('date'); // 'date', 'source', 'category'
   const [stockInfo, setStockInfo] = useState(null); // 当前搜索的股票信息
   const [suggestions, setSuggestions] = useState([]); // 股票代码自动补全建议
-  const [trendingNews, setTrendingNews] = useState({}); // 每日热门新闻
+  const [trendingNews, setTrendingNews] = useState([]); // 各搜索引擎热榜
   const [trendingLoading, setTrendingLoading] = useState(false);
 
   // 获取热门新闻
