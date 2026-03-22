@@ -759,80 +759,128 @@ export async function fetchTrendingNews() {
     return cached;
   }
 
-  // 为每个分类获取新闻
-  const promises = TRENDING_CATEGORIES.map(async (category) => {
-    // 随机选择一个关键词
-    const keyword = category.keywords[Math.floor(Math.random() * category.keywords.length)];
-    
-    const TIMEOUT_MS = 5000;
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-      
-      const proxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(
-        `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans`
-      )}`;
-      
-      const response = await fetch(proxyUrl, {
-        method: 'GET',
-        headers: { 'Accept': '*/*' },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        return {
-          ...category,
-          news: [],
-          keyword,
-        };
-      }
-      
-      const text = await response.text();
-      if (!text) {
-        return {
-          ...category,
-          news: [],
-          keyword,
-        };
-      }
-      
-      let xmlText = text;
-      if (text.trimStart().startsWith('{')) {
-        try {
-          const json = JSON.parse(text);
-          xmlText = json.contents || json.data || text;
-        } catch {}
-      }
-      
-      const items = parseRssXml(xmlText, keyword);
-      return {
-        ...category,
-        news: items.slice(0, 10),
-        keyword,
-      };
-    } catch (err) {
-      console.warn(`获取 ${category.name} 失败:`, err);
-      return {
-        ...category,
-        news: [],
-        keyword,
-      };
-    }
-  });
+  // 预设热门话题（作为备用）
+  const fallbackData = [
+    {
+      id: 'tech',
+      name: '科技热榜',
+      icon: '💻',
+      color: '#4285F4',
+      news: [
+        { title: 'ChatGPT', sourceName: 'AI' },
+        { title: '人工智能', sourceName: 'AI' },
+        { title: '芯片半导体', sourceName: '科技' },
+        { title: '苹果 iPhone', sourceName: '科技' },
+        { title: '华为', sourceName: '科技' },
+      ],
+    },
+    {
+      id: 'finance',
+      name: '财经热榜',
+      icon: '💰',
+      color: '#34A853',
+      news: [
+        { title: 'A股行情', sourceName: '财经' },
+        { title: '比特币', sourceName: '加密货币' },
+        { title: '央行利率', sourceName: '财经' },
+        { title: '茅台股价', sourceName: '个股' },
+        { title: '房地产', sourceName: '财经' },
+      ],
+    },
+    {
+      id: 'auto',
+      name: '汽车热榜',
+      icon: '🚗',
+      color: '#EA4335',
+      news: [
+        { title: '特斯拉', sourceName: '汽车' },
+        { title: '比亚迪', sourceName: '汽车' },
+        { title: '新能源汽车', sourceName: '汽车' },
+        { title: '小米汽车', sourceName: '汽车' },
+        { title: '自动驾驶', sourceName: '科技' },
+      ],
+    },
+    {
+      id: 'global',
+      name: '国际热榜',
+      icon: '🌍',
+      color: '#FBBC05',
+      news: [
+        { title: '美国大选', sourceName: '国际' },
+        { title: '日本经济', sourceName: '国际' },
+        { title: '欧洲局势', sourceName: '国际' },
+        { title: '中东冲突', sourceName: '国际' },
+        { title: '俄乌战争', sourceName: '国际' },
+      ],
+    },
+  ];
 
-  const results = await Promise.all(promises);
-  
-  // 过滤掉没有新闻的分类
-  const validResults = results.filter(r => r.news && r.news.length > 0);
-  
-  // 缓存结果
-  if (validResults.length > 0) {
-    writeTrendingCache(validResults);
+  // 尝试从在线获取
+  try {
+    // 为每个分类获取新闻
+    const promises = TRENDING_CATEGORIES.map(async (category) => {
+      const keyword = category.keywords[0]; // 使用第一个关键词
+      
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const proxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(
+          `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans`
+        )}`;
+        
+        const response = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: { 'Accept': '*/*' },
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) throw new Error('请求失败');
+        
+        const text = await response.text();
+        if (!text) throw new Error('空响应');
+        
+        let xmlText = text;
+        if (text.trimStart().startsWith('{')) {
+          try {
+            const json = JSON.parse(text);
+            xmlText = json.contents || json.data || text;
+          } catch {}
+        }
+        
+        const items = parseRssXml(xmlText, keyword);
+        if (items.length === 0) throw new Error('无数据');
+        
+        return {
+          ...category,
+          news: items.slice(0, 10),
+        };
+      } catch (err) {
+        // 返回备用数据
+        const fallback = fallbackData.find(f => f.id === category.id);
+        return fallback || {
+          ...category,
+          news: [],
+        };
+      }
+    });
+
+    const results = await Promise.all(promises);
+    const validResults = results.filter(r => r.news && r.news.length > 0);
+    
+    if (validResults.length > 0) {
+      writeTrendingCache(validResults);
+      return validResults;
+    }
+  } catch (err) {
+    console.warn('获取在线热榜失败，使用备用数据:', err);
   }
-  
-  return validResults;
+
+  // 如果在线获取失败，返回备用数据
+  writeTrendingCache(fallbackData);
+  return fallbackData;
 }
 
 /**
