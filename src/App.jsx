@@ -27,6 +27,40 @@ import {
   countCachedInsights,
 } from './utils/aiService.js';
 
+// ─── 错误消息映射 ───────────────────────────────────────────────────────────
+const ERROR_MESSAGES = {
+  'Failed to fetch': {
+    title: '网络连接失败',
+    description: '请检查您的网络连接，然后重试',
+    action: '重试',
+  },
+  'NetworkError': {
+    title: '网络连接失败',
+    description: '请检查您的网络连接，然后重试',
+    action: '重试',
+  },
+  '代理节点故障': {
+    title: '服务暂时不可用',
+    description: '我们正在尝试其他数据源，请稍候',
+    action: '重试',
+  },
+  'API Key 未配置': {
+    title: '需要配置 AI 模型',
+    description: '点击右上角设置图标，添加您的 API 密钥',
+    action: '前往设置',
+  },
+  'API 请求失败': {
+    title: 'AI 分析失败',
+    description: '请检查 API 密钥是否正确，或尝试其他模型',
+    action: '查看设置',
+  },
+  '所有代理节点尝试失败': {
+    title: '数据源不可用',
+    description: '暂时无法获取新闻数据，请稍后再试',
+    action: '重试',
+  },
+};
+
 // ─── 默认模型配置 ─────────────────────────────────────────────────────────────
 
 const DEFAULT_MODEL_CONFIGS = [
@@ -102,7 +136,24 @@ function formatDate(dateStr) {
 // ─── 骨架屏 ──────────────────────────────────────────────────────────────────
 
 function Skeleton({ w = 'full', h = 3 }) {
-  return <div className={`skeleton rounded w-${w} h-${h}`} />;
+  // 将w参数转换为实际宽度值
+  const widthMap = {
+    'full': '100%',
+    '24': '6rem',
+    '16': '4rem', 
+    '10': '2.5rem',
+    '5/6': '83.333%',
+    '4/6': '66.667%',
+    '4/5': '80%',
+  };
+  const width = widthMap[w] || w;
+  
+  return (
+    <div 
+      className="skeleton rounded" 
+      style={{ width, height: `${h * 4}px` }} 
+    />
+  );
 }
 
 function SkeletonCard() {
@@ -222,6 +273,15 @@ function ApiModal({ configs, onSave, onClose }) {
   const [local, setLocal] = useState(configs.map((c) => ({ ...c })));
   const [showKey, setShowKey] = useState({});
   const [cacheCount, setCacheCount] = useState(countCachedInsights);
+
+  // ESC键关闭模态框
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const update = (id, field, val) =>
     setLocal((p) => p.map((c) => (c.id === id ? { ...c, [field]: val } : c)));
@@ -391,6 +451,30 @@ function InsightModal({ mode, newsItem, modelConfigs, onClose }) {
   const [activeTab, setActiveTab] = useState(0);
   const fetched = useRef(false);
 
+  // 导出分析结果
+  const exportInsight = () => {
+    const content = mode === 'single' ? singleResult : multiResults[activeTab]?.content;
+    if (!content) return;
+    
+    const header = `# ${newsItem.title}\n\n> 来源: ${newsItem.sourceName}\n> 日期: ${newsItem.pubDate}\n\n---\n\n`;
+    const blob = new Blob([header + content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analysis-${newsItem.id}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ESC键关闭模态框
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const primaryModel = modelConfigs.find((m) => m.apiKey?.trim() && m.baseUrl?.trim());
 
   useEffect(() => {
@@ -453,9 +537,18 @@ function InsightModal({ mode, newsItem, modelConfigs, onClose }) {
                 {newsItem.pubDate && ` · ${formatDate(newsItem.pubDate)}`}
               </p>
             </div>
-            <button onClick={onClose} className="btn-ghost w-7 h-7 rounded-lg flex items-center justify-center shrink-0">
-              <X size={14} />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button 
+                onClick={exportInsight}
+                className="btn-ghost w-7 h-7 rounded-lg flex items-center justify-center"
+                title="导出分析结果"
+              >
+                <Database size={14} />
+              </button>
+              <button onClick={onClose} className="btn-ghost w-7 h-7 rounded-lg flex items-center justify-center">
+                <X size={14} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -602,6 +695,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [loading, setLoading]     = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const searchInputRef = useRef(null);
 
   const [theme, setTheme] = useState(() => localStorage.getItem('anti_cocoon_theme') || 'dark');
   const [modelConfigs, setModelConfigs] = useState(loadModelConfigs);
@@ -609,6 +703,8 @@ export default function App() {
   const [insightModal, setInsightModal] = useState(null);
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [bookmarkSearch, setBookmarkSearch] = useState('');
+  const [sortBy, setSortBy] = useState('date'); // 'date', 'source', 'category'
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -619,16 +715,55 @@ export default function App() {
     localStorage.setItem('anti_cocoon_theme', theme);
   }, [theme]);
 
+  // 键盘快捷键
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl/Cmd + K: 聚焦搜索框
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      // Ctrl/Cmd + B: 切换书签视图
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setShowBookmarks(v => !v);
+      }
+      // /: 聚焦搜索框（类似 GitHub）
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const configuredCount = modelConfigs.filter((m) => m.apiKey?.trim() && m.baseUrl?.trim()).length;
 
   const displayedItems = (() => {
+    let items = [];
     if (showBookmarks) {
       const bIds = new Set(bookmarks.map((b) => b.id));
-      return (grouped['all'] || []).filter((n) => bIds.has(n.id));
+      items = (grouped['all'] || []).filter((n) => bIds.has(n.id));
+    } else if (activeCategory === 'uncategorized') {
+      items = grouped['uncategorized'] || [];
+    } else if (activeCategory === 'all') {
+      items = grouped['all'] || [];
+    } else {
+      items = grouped[activeCategory] || [];
     }
-    if (activeCategory === 'uncategorized') return grouped['uncategorized'] || [];
-    if (activeCategory === 'all') return grouped['all'] || [];
-    return grouped[activeCategory] || [];
+    
+    // 排序
+    switch (sortBy) {
+      case 'date':
+        return items.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+      case 'source':
+        return items.sort((a, b) => (a.sourceName || '').localeCompare(b.sourceName || ''));
+      case 'category':
+        return items.sort((a, b) => (a.categoryId || '').localeCompare(b.categoryId || ''));
+      default:
+        return items;
+    }
   })();
 
   // ── 搜索 ──
@@ -657,6 +792,22 @@ export default function App() {
     }
   }, [inputValue]);
 
+  // ── 错误消息处理 ──
+  const getErrorInfo = (errorMessage) => {
+    // 查找匹配的错误消息
+    for (const [key, value] of Object.entries(ERROR_MESSAGES)) {
+      if (errorMessage.includes(key)) {
+        return value;
+      }
+    }
+    // 默认错误消息
+    return {
+      title: '出现错误',
+      description: errorMessage,
+      action: '重试',
+    };
+  };
+
   // ── 书签 ──
   const handleToggleBookmark = (item) => {
     setBookmarks((prev) => {
@@ -667,7 +818,28 @@ export default function App() {
     });
   };
 
+  // 导出书签
+  const exportBookmarks = (format = 'json') => {
+    const data = format === 'json' 
+      ? JSON.stringify(bookmarks, null, 2)
+      : bookmarks.map(b => `"${b.title}","${b.link}","${b.pubDate}"`).join('\n');
+    
+    const blob = new Blob([data], { type: format === 'json' ? 'application/json' : 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `anti-cocoon-bookmarks.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const bookmarkIds = new Set(bookmarks.map((b) => b.id));
+  
+  // 过滤后的书签列表
+  const filteredBookmarks = bookmarks.filter(b => 
+    b.title.toLowerCase().includes(bookmarkSearch.toLowerCase()) ||
+    b.description?.toLowerCase().includes(bookmarkSearch.toLowerCase())
+  );
 
   // ── 导航列表 ──
   const navItems = [
@@ -703,6 +875,7 @@ export default function App() {
             <div className="relative flex-1">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none transition-colors duration-300 group-focus-within:text-amber-400" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
@@ -906,27 +1079,60 @@ export default function App() {
         )}
 
         {/* ── 搜索错误 ── */}
-        {searchError && !loading && (
-          <div className="flex flex-col items-center gap-4 py-20 animate-fade-in">
-            <div className="w-12 h-12 rounded-2xl bg-red-400/8 border border-red-400/20 flex items-center justify-center">
-              <AlertCircle size={22} className="text-red-400" />
+        {searchError && !loading && (() => {
+          const errorInfo = getErrorInfo(searchError);
+          return (
+            <div className="flex flex-col items-center gap-4 py-20 animate-fade-in">
+              <div className="w-12 h-12 rounded-2xl bg-red-400/8 border border-red-400/20 flex items-center justify-center">
+                <AlertCircle size={22} className="text-red-400" />
+              </div>
+              <div className="text-center">
+                <p className="text-red-400 text-sm font-medium">{errorInfo.title}</p>
+                <p className="text-slate-500 text-xs mt-1">{errorInfo.description}</p>
+              </div>
+              <button onClick={() => handleSearch()} className="btn-amber px-4 py-2 rounded-xl text-xs flex items-center gap-1.5">
+                <RefreshCw size={12} /> {errorInfo.action}
+              </button>
             </div>
-            <div className="text-center">
-              <p className="text-red-400 text-sm font-medium">{searchError}</p>
-              <p className="text-slate-500 text-xs mt-1">请检查网络连接，或尝试其他关键词</p>
-            </div>
-            <button onClick={() => handleSearch()} className="btn-amber px-4 py-2 rounded-xl text-xs flex items-center gap-1.5">
-              <RefreshCw size={12} /> 重试
-            </button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── 书签清单 ── */}
         {showBookmarks && !loading && (
           <div className="animate-fade-in">
-            <div className="flex items-center gap-2 mb-5">
-              <BookMarked size={15} className="text-amber-400" />
-              <h2 className="text-sm font-semibold text-slate-200">阅读清单 ({bookmarks.length})</h2>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <BookMarked size={15} className="text-amber-400" />
+                <h2 className="text-sm font-semibold text-slate-200">阅读清单 ({bookmarks.length})</h2>
+              </div>
+              {bookmarks.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text"
+                      placeholder="搜索书签..."
+                      value={bookmarkSearch}
+                      onChange={(e) => setBookmarkSearch(e.target.value)}
+                      className="input-search pl-9 pr-3 py-2 text-xs rounded-xl w-48"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => exportBookmarks('json')}
+                    className="btn-ghost px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
+                    title="导出为JSON"
+                  >
+                    <Database size={12} /> JSON
+                  </button>
+                  <button 
+                    onClick={() => exportBookmarks('csv')}
+                    className="btn-ghost px-3 py-2 rounded-xl text-xs flex items-center gap-1.5"
+                    title="导出为CSV"
+                  >
+                    <Database size={12} /> CSV
+                  </button>
+                </div>
+              )}
             </div>
             {bookmarks.length === 0 ? (
               <div className="text-center py-16 text-slate-500">
@@ -934,9 +1140,15 @@ export default function App() {
                 <p className="text-sm">还没有收藏任何情报</p>
                 <p className="text-xs mt-1">点击新闻卡片右上角的书签图标即可收藏</p>
               </div>
+            ) : filteredBookmarks.length === 0 ? (
+              <div className="text-center py-16 text-slate-500">
+                <Search size={28} className="mx-auto mb-3 opacity-30" />
+                <p className="text-sm">没有找到匹配的书签</p>
+                <p className="text-xs mt-1">尝试其他关键词</p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {bookmarks.map((item, idx) => (
+                {filteredBookmarks.map((item, idx) => (
                   <NewsCard
                     key={item.id}
                     index={idx}
@@ -965,12 +1177,23 @@ export default function App() {
                   <span className="ml-1">条情报</span>
                 </span>
               </div>
-              <button
-                onClick={() => handleSearch(keyword)}
-                className="btn-ghost flex items-center gap-1 text-2xs px-2 py-1 rounded-lg"
-              >
-                <RefreshCw size={10} /> 刷新
-              </button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-transparent border border-white/10 rounded-lg px-2 py-1 text-2xs text-slate-400 focus:outline-none focus:border-amber-400/30"
+                >
+                  <option value="date">按日期排序</option>
+                  <option value="source">按来源排序</option>
+                  <option value="category">按分类排序</option>
+                </select>
+                <button
+                  onClick={() => handleSearch(keyword)}
+                  className="btn-ghost flex items-center gap-1 text-2xs px-2 py-1 rounded-lg"
+                >
+                  <RefreshCw size={10} /> 刷新
+                </button>
+              </div>
             </div>
 
             {/* Cards */}

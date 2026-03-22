@@ -81,16 +81,69 @@ function cacheKey(newsId, modelKey) {
 }
 
 /**
- * 从 LocalStorage 读取缓存结果
+ * 读取 LocalStorage 缓存
  * @param {string} key
+ * @param {number} maxAgeHours - 最大缓存时间（小时），默认24小时
  * @returns {string|null}
  */
-function readCache(key) {
+function readCache(key, maxAgeHours = 24) {
   try {
-    return localStorage.getItem(key);
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    
+    const entry = JSON.parse(raw);
+    const ageHours = (Date.now() - entry.timestamp) / (1000 * 60 * 60);
+    
+    if (ageHours > maxAgeHours) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return entry.content;
   } catch {
     return null;
   }
+}
+
+/**
+ * 写入 LocalStorage 缓存
+ * @param {string} key
+ * @param {string} value
+ */
+function writeCache(key, value) {
+  try {
+    const cacheEntry = {
+      content: value,
+      timestamp: Date.now(),
+      version: '1.0'
+    };
+    localStorage.setItem(key, JSON.stringify(cacheEntry));
+  } catch {
+    // Storage full — 尝试清理旧缓存
+    clearOldestCache();
+  }
+}
+
+/**
+ * 清理最旧的缓存条目
+ */
+function clearOldestCache() {
+  try {
+    const entries = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(CACHE_PREFIX)) {
+        try {
+          const entry = JSON.parse(localStorage.getItem(key));
+          entries.push({ key, timestamp: entry.timestamp || 0 });
+        } catch {}
+      }
+    }
+    entries.sort((a, b) => a.timestamp - b.timestamp);
+    // 删除最旧的 20%
+    const toRemove = Math.ceil(entries.length * 0.2);
+    entries.slice(0, toRemove).forEach(e => localStorage.removeItem(e.key));
+  } catch {}
+}
 }
 
 /**
