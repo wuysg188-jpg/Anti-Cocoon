@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ─── Google Translate Engine CSS (hide ALL injected UI) ───────────────── */
-/* Kill the top banner bar (both old and new class structures) */
+/* 隐藏所有 Google Translate 相关元素 */
 .goog-te-banner-frame,
 .goog-te-balloon-frame,
 #goog-gt-votingpanel,
@@ -20,24 +20,42 @@ iframe.skiptranslate,
 .goog-te-gadget-simple,
 .VIpgJd-ZVi9od-l4eHX-hSRGPd,
 .VIpgJd-ZVi9od-ORHb-OEVmcd,
-#\\:0\\.language_list,
-#\\:0\\.restore,
-#\\:0\\.container {
+[id^="\\:"],
+[class*="VIpgJd"],
+[class*="goog-te"],
+iframe[name="goog-te-banner-frame"] {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
+  width: 0 !important;
   max-height: 0 !important;
+  max-width: 0 !important;
   overflow: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
 }
+
+/* 防止 body 被推下去 */
 body, html {
   top: 0 !important;
   position: static !important;
-}
-/* 防止页面被压缩 */
-body {
   margin-top: 0 !important;
+  padding-top: 0 !important;
+  transform: none !important;
+}
+
+/* 隐藏所有 iframe（Google Translate 通常用 iframe） */
+body > iframe {
+  display: none !important;
+}
+
+/* 隐藏可能的浮动元素 */
+body > div:not([id]):not([class]) {
+  display: none !important;
+}
 }
 
 /* ─── Global Custom Scrollbar ──────────────────────────────────────────── */
