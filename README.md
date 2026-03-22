@@ -1,8 +1,21 @@
 # Anti-Cocoon AI · 跨界情报看板
 
-[![版本](https://img.shields.io/badge/版本-v0.2.0-blue)](https://github.com/wuysg188-jpg/Anti-Cocoon/releases)
-[![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
-[![技术栈](https://img.shields.io/badge/技术栈-React%20%2B%20Tailwind%20CSS%20%2B%20Vite-orange)](https://github.com/wuysg188-jpg/Anti-Cocoon)
+<div align="center">
+
+[![版本](https://img.shields.io/github/v/tag/wuysg188-jpg/Anti-Cocoon?style=flat-square&color=blue)](https://github.com/wuysg188-jpg/Anti-Cocoon/releases)
+[![许可证](https://img.shields.io/github/license/wuysg188-jpg/Anti-Cocoon?style=flat-square&color=green)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/wuysg188-jpg/Anti-Cocoon?style=flat-square&color=yellow)](https://github.com/wuysg188-jpg/Anti-Cocoon/stargazers)
+[![Forks](https://img.shields.io/github/forks/wuysg188-jpg/Anti-Cocoon?style=flat-square&color=orange)](https://github.com/wuysg188-jpg/Anti-Cocoon/network/members)
+[![Issues](https://img.shields.io/github/issues/wuysg188-jpg/Anti-Cocoon?style=flat-square&color=red)](https://github.com/wuysg188-jpg/Anti-Cocoon/issues)
+
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-部署成功-222222?style=flat-square&logo=github&logoColor=white)](https://wuysg188-jpg.github.io/Anti-Cocoon/)
+
+[🌐 在线预览](https://wuysg188-jpg.github.io/Anti-Cocoon/) | [📖 文档](#) | [🐛 提交Issue](https://github.com/wuysg188-jpg/Anti-Cocoon/issues)
+
+</div>
 
 一个旨在**打破信息茧房**的AI驱动型新闻聚合与分析平台。以情报终端的视角，聚合全球资讯，通过多AI模型交叉审查，洞见事件底层逻辑。
 
