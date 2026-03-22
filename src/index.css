@@ -10,14 +10,34 @@
 .goog-te-spinner,
 .VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
 .VIpgJd-ZVi9od-aZ2wEe-wOHMyf-ti6hGc,
-iframe.skiptranslate {
+iframe.skiptranslate,
+.goog-te-menu-value,
+.goog-te-menu,
+.goog-te-ftab,
+.goog-tooltip,
+#goog-gt-langAlert,
+.goog-te-gadget,
+.goog-te-gadget-simple,
+.VIpgJd-ZVi9od-l4eHX-hSRGPd,
+.VIpgJd-ZVi9od-ORHb-OEVmcd,
+#\\:0\\.language_list,
+#\\:0\\.restore,
+#\\:0\\.container {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 body, html {
   top: 0 !important;
   position: static !important;
+}
+/* 防止页面被压缩 */
+body {
+  margin-top: 0 !important;
 }
 
 /* ─── Global Custom Scrollbar ──────────────────────────────────────────── */
