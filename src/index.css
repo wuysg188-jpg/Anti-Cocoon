@@ -56,7 +56,6 @@ body > iframe {
 body > div:not([id]):not([class]) {
   display: none !important;
 }
-}
 
 /* ─── Global Custom Scrollbar ──────────────────────────────────────────── */
 * {

@@ -11,7 +11,7 @@
 // ─── 常量 ─────────────────────────────────────────────────────────────────────
 
 /**
- * CORS 代理列表 - 优先使用最快的
+ * CORS 代理列表
  */
 const CORS_PROXIES = [
   'https://corsproxy.io/?',
@@ -19,15 +19,66 @@ const CORS_PROXIES = [
   'https://api.allorigins.win/raw?url=',
 ];
 
-// Google News RSS URL
-const GOOGLE_NEWS_RSS_URLS = [
-  'https://news.google.com/rss/search?q={KEYWORD}&hl=en-US&gl=US&ceid=US:en',
-  'https://news.google.com/rss/search?q={KEYWORD}',
-];
+/**
+ * 多新闻源 RSS 配置
+ * 提供多种语言和来源，确保结果新鲜多样
+ */
+const NEWS_SOURCES = {
+  // Google News - 英文（最快最新）
+  google_en: {
+    name: 'Google News (EN)',
+    urls: [
+      'https://news.google.com/rss/search?q={KEYWORD}&hl=en-US&gl=US&ceid=US:en',
+    ],
+    priority: 1,
+  },
+  // Google News - 中文
+  google_zh: {
+    name: 'Google News (中文)',
+    urls: [
+      'https://news.google.com/rss/search?q={KEYWORD}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans',
+    ],
+    priority: 2,
+  },
+  // Bing News - 英文
+  bing_en: {
+    name: 'Bing News',
+    urls: [
+      'https://www.bing.com/news/search?q={KEYWORD}&format=rss',
+    ],
+    priority: 2,
+  },
+  // Yahoo News
+  yahoo: {
+    name: 'Yahoo News',
+    urls: [
+      'https://news.search.yahoo.com/rss?p={KEYWORD}',
+    ],
+    priority: 3,
+  },
+  // BBC News (如果搜索 BBC 相关)
+  bbc: {
+    name: 'BBC News',
+    urls: [
+      'https://feeds.bbci.co.uk/news/rss.xml',
+    ],
+    priority: 4,
+    keywords: ['bbc', 'uk', 'britain', 'london'],
+  },
+  // TechCrunch (科技新闻)
+  techcrunch: {
+    name: 'TechCrunch',
+    urls: [
+      'https://techcrunch.com/feed/',
+    ],
+    priority: 4,
+    keywords: ['tech', 'startup', 'ai', 'software', 'app'],
+  },
+};
 
 const CACHE_PREFIX = 'anti_cocoon_insight_';
 const NEWS_CACHE_PREFIX = 'anti_cocoon_news_';
-const NEWS_CACHE_MAX_AGE = 30 * 60 * 1000; // 30分钟缓存
+const NEWS_CACHE_MAX_AGE = 15 * 60 * 1000; // 15分钟缓存（更短，保证新鲜）
 
 /** 单次发送给 AI 的最大新闻文本字符数（防止 Token 爆炸） */
 const MAX_CONTENT_CHARS = 3000;
@@ -234,30 +285,66 @@ function parseRssXml(xmlText, keyword) {
     throw new Error('RSS 解析失败：格式错误');
   }
 
-  const items = Array.from(xml.querySelectorAll('item'));
+  // 尝试多种选择器来获取 items
+  let items = Array.from(xml.querySelectorAll('item'));
+  
+  // 有些 RSS 使用 entry 而不是 item（如 Atom 格式）
   if (items.length === 0) {
-    throw new Error(`未找到「${keyword}」相关新闻，请尝试其他关键词`);
+    items = Array.from(xml.querySelectorAll('entry'));
+  }
+  
+  if (items.length === 0) {
+    return []; // 返回空数组而不是抛出错误
   }
 
-  const channelTitle = xml.querySelector('channel > title')?.textContent || 'Google News';
+  const channelTitle = xml.querySelector('channel > title')?.textContent 
+    || xml.querySelector('feed > title')?.textContent 
+    || 'News';
 
   return items.map((item) => {
     const title = item.querySelector('title')?.textContent || '（无标题）';
-    const link = item.querySelector('link')?.textContent
-      || item.querySelector('guid')?.textContent || '#';
-    const description = stripHtml(item.querySelector('description')?.textContent || '');
-    const pubDate = item.querySelector('pubDate')?.textContent || '';
-    const source = item.querySelector('source')?.textContent || channelTitle;
+    
+    // 处理不同格式的链接
+    let link = item.querySelector('link')?.textContent 
+      || item.querySelector('guid')?.textContent 
+      || item.querySelector('link')?.getAttribute('href')
+      || '#';
+    
+    const description = stripHtml(
+      item.querySelector('description')?.textContent 
+      || item.querySelector('summary')?.textContent 
+      || item.querySelector('content')?.textContent
+      || ''
+    );
+    
+    const pubDate = item.querySelector('pubDate')?.textContent 
+      || item.querySelector('published')?.textContent 
+      || item.querySelector('updated')?.textContent
+      || '';
+    
+    const source = item.querySelector('source')?.textContent 
+      || channelTitle;
+
+    // 尝试获取缩略图
+    let thumbnail = null;
+    const mediaContent = item.querySelector('media\\:content, content');
+    if (mediaContent) {
+      thumbnail = mediaContent.getAttribute('url');
+    }
+    const enclosure = item.querySelector('enclosure');
+    if (!thumbnail && enclosure && enclosure.getAttribute('type')?.startsWith('image')) {
+      thumbnail = enclosure.getAttribute('url');
+    }
 
     const newsItem = {
       title,
       link,
-      description,
-      content: description,
+      description: description.slice(0, 500), // 限制描述长度
+      content: description.slice(0, 500),
       pubDate,
       author: source,
       sourceName: source,
-      thumbnail: null,
+      thumbnail,
     };
 
     return {
@@ -288,12 +375,7 @@ export async function fetchLiveNews(keyword) {
     return cached;
   }
 
-  const rssUrls = GOOGLE_NEWS_RSS_URLS.map((t) =>
-    t.replace('{KEYWORD}', encodeURIComponent(kw))
-  );
-
-  const WORKING_PROXY_KEY = 'anti_cocoon_working_proxy';
-  const TIMEOUT_MS = 3000; // 3秒超时
+  const TIMEOUT_MS = 4000; // 4秒超时
 
   // 带超时的 fetch
   const fetchWithTimeout = async (url, timeout) => {
@@ -313,21 +395,24 @@ export async function fetchLiveNews(keyword) {
     }
   };
 
-  // 单个代理+RSS组合的请求
-  const tryProxy = async (proxyBase, rssUrl) => {
+  // 单个请求的处理
+  const trySource = async (rssUrl, sourceName) => {
+    // 使用第一个可用的代理
+    const proxyBase = CORS_PROXIES[0];
     const proxyUrl = `${proxyBase}${encodeURIComponent(rssUrl)}`;
+    
     const response = await fetchWithTimeout(proxyUrl, TIMEOUT_MS);
     
     if (!response.ok) {
-      throw new Error(`代理节点故障 (HTTP ${response.status})`);
+      throw new Error(`${sourceName} 请求失败`);
     }
 
     const text = await response.text();
     if (!text || text.trim().length === 0) {
-      throw new Error('代理返回空白');
+      throw new Error(`${sourceName} 返回空白`);
     }
 
-    // allorigins sometimes returns JSON wrapping the content
+    // 处理 JSON 包装的响应
     let xmlText = text;
     if (text.trimStart().startsWith('{')) {
       try {
@@ -337,32 +422,70 @@ export async function fetchLiveNews(keyword) {
     }
 
     const items = parseRssXml(xmlText, kw);
-    return { items, proxy: proxyBase };
+    return items.map(item => ({ ...item, sourceType: sourceName }));
   };
 
-  // 构建所有请求组合
-  const requests = [];
-  for (const proxyBase of CORS_PROXIES) {
-    for (const rssUrl of rssUrls) {
-      requests.push(
-        tryProxy(proxyBase, rssUrl).catch(() => null)
-      );
+  // 构建所有新闻源的请求
+  const allRequests = [];
+  
+  // 高优先级源：Google News（最快最新）
+  for (const [key, source] of Object.entries(NEWS_SOURCES)) {
+    if (source.priority <= 2) {
+      for (const urlTemplate of source.urls) {
+        const url = urlTemplate.replace('{KEYWORD}', encodeURIComponent(kw));
+        allRequests.push(
+          trySource(url, source.name).catch(() => [])
+        );
+      }
     }
   }
 
-  // 并行请求所有组合
-  const results = await Promise.all(requests);
-  const success = results.find(r => r !== null);
+  // 并行请求高优先级源
+  const highPriorityResults = await Promise.all(allRequests);
+  let allItems = highPriorityResults.flat();
 
-  if (success) {
-    // 记住成功的代理，下次优先使用
-    try { localStorage.setItem(WORKING_PROXY_KEY, success.proxy); } catch {}
-    // 缓存结果
-    writeNewsCache(kw, success.items);
-    return success.items;
+  // 如果高优先级源结果不足，请求低优先级源
+  if (allItems.length < 10) {
+    const lowPriorityRequests = [];
+    for (const [key, source] of Object.entries(NEWS_SOURCES)) {
+      if (source.priority > 2) {
+        for (const urlTemplate of source.urls) {
+          const url = urlTemplate.replace('{KEYWORD}', encodeURIComponent(kw));
+          lowPriorityRequests.push(
+            trySource(url, source.name).catch(() => [])
+          );
+        }
+      }
+    }
+    const lowPriorityResults = await Promise.all(lowPriorityRequests);
+    allItems = [...allItems, ...lowPriorityResults.flat()];
   }
 
-  throw new Error('所有情报节点尝试失败。请检查网络或更换关键词。');
+  // 去重（基于链接）
+  const seen = new Set();
+  const uniqueItems = allItems.filter(item => {
+    if (!item.link || seen.has(item.link)) return false;
+    seen.add(item.link);
+    return true;
+  });
+
+  // 按发布时间排序（最新的在前）
+  uniqueItems.sort((a, b) => {
+    const dateA = new Date(a.pubDate || 0);
+    const dateB = new Date(b.pubDate || 0);
+    return dateB - dateA;
+  });
+
+  // 只保留最新的 50 条
+  const finalItems = uniqueItems.slice(0, 50);
+
+  if (finalItems.length === 0) {
+    throw new Error('未找到相关新闻，请尝试其他关键词');
+  }
+
+  // 缓存结果
+  writeNewsCache(kw, finalItems);
+  return finalItems;
 }
 
 // ─── 2. 单模型 AI 分析 ────────────────────────────────────────────────────────
