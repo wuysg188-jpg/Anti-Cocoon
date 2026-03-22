@@ -1,7 +1,7 @@
 {
   "name": "anti-cocoon-ai-web",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "homepage": "https://wuysg188-jpg.github.io/Anti-Cocoon",
   "scripts": {

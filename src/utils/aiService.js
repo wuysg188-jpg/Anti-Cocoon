@@ -634,3 +634,146 @@ export function countCachedInsights() {
   }
   return count;
 }
+
+// ─── 每日热门新闻 ──────────────────────────────────────────────────────
+
+const TRENDING_CACHE_KEY = 'anti_cocoon_trending';
+const TRENDING_CACHE_MAX_AGE = 30 * 60 * 1000; // 30分钟缓存
+
+/**
+ * 热门话题分类配置
+ */
+const TRENDING_TOPICS = [
+  { id: 'tech', name: '科技', icon: '💻', keywords: ['AI', '人工智能', '芯片', '半导体'] },
+  { id: 'finance', name: '财经', icon: '💰', keywords: ['股市', 'A股', '港股', '美股'] },
+  { id: 'world', name: '国际', icon: '🌍', keywords: ['国际', '外交', '全球'] },
+  { id: 'china', name: '国内', icon: '🇨🇳', keywords: ['中国', '政策', '经济'] },
+  { id: 'stock', name: '个股', icon: '📈', keywords: ['茅台', '腾讯', '苹果', '特斯拉'] },
+  { id: 'energy', name: '新能源', icon: '⚡', keywords: ['新能源', '电动车', '光伏', '锂电'] },
+];
+
+/**
+ * 读取热门新闻缓存
+ */
+function readTrendingCache() {
+  try {
+    const raw = localStorage.getItem(TRENDING_CACHE_KEY);
+    if (!raw) return null;
+    
+    const entry = JSON.parse(raw);
+    const age = Date.now() - entry.timestamp;
+    
+    if (age > TRENDING_CACHE_MAX_AGE) {
+      localStorage.removeItem(TRENDING_CACHE_KEY);
+      return null;
+    }
+    return entry.data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 写入热门新闻缓存
+ */
+function writeTrendingCache(data) {
+  try {
+    const entry = {
+      data,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(TRENDING_CACHE_KEY, JSON.stringify(entry));
+  } catch {}
+}
+
+/**
+ * 获取单个话题的热门新闻
+ */
+async function fetchTopicNews(keyword) {
+  const TIMEOUT_MS = 5000;
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    
+    const proxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(
+      `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans`
+    )}`;
+    
+    const response = await fetch(proxyUrl, {
+      method: 'GET',
+      headers: { 'Accept': '*/*' },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) return [];
+    
+    const text = await response.text();
+    if (!text) return [];
+    
+    let xmlText = text;
+    if (text.trimStart().startsWith('{')) {
+      try {
+        const json = JSON.parse(text);
+        xmlText = json.contents || json.data || text;
+      } catch {}
+    }
+    
+    const items = parseRssXml(xmlText, keyword);
+    return items.slice(0, 5); // 每个话题取前5条
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 获取每日热门新闻排行榜
+ * @returns {Promise<Object>} 按分类组织的热门新闻
+ */
+export async function fetchTrendingNews() {
+  // 检查缓存
+  const cached = readTrendingCache();
+  if (cached) {
+    return cached;
+  }
+
+  const result = {};
+  
+  // 并行获取所有话题的新闻
+  const promises = TRENDING_TOPICS.map(async (topic) => {
+    const keyword = topic.keywords[Math.floor(Math.random() * topic.keywords.length)];
+    const items = await fetchTopicNews(keyword);
+    
+    if (items.length > 0) {
+      result[topic.id] = {
+        ...topic,
+        news: items.slice(0, 3), // 取前3条
+        keyword,
+      };
+    }
+  });
+  
+  await Promise.all(promises);
+  
+  // 缓存结果
+  if (Object.keys(result).length > 0) {
+    writeTrendingCache(result);
+  }
+  
+  return result;
+}
+
+/**
+ * 获取热门搜索关键词
+ * @returns {Array<string>}
+ */
+export function getHotKeywords() {
+  return [
+    '人工智能', 'ChatGPT', '芯片', '新能源汽车',
+    'A股', '港股', '美股', '比特币',
+    '特斯拉', '苹果', '华为', '小米',
+    '半导体', '光伏', '锂电', '医药',
+  ];
+}

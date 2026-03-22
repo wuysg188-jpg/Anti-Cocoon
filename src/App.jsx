@@ -25,6 +25,8 @@ import {
   fetchMultiModelInsights,
   clearAllInsightCache,
   countCachedInsights,
+  fetchTrendingNews,
+  getHotKeywords,
 } from './utils/aiService.js';
 import { detectStockCode, getAllStocks } from './utils/stockCodes.js';
 
@@ -708,6 +710,24 @@ export default function App() {
   const [sortBy, setSortBy] = useState('date'); // 'date', 'source', 'category'
   const [stockInfo, setStockInfo] = useState(null); // 当前搜索的股票信息
   const [suggestions, setSuggestions] = useState([]); // 股票代码自动补全建议
+  const [trendingNews, setTrendingNews] = useState({}); // 每日热门新闻
+  const [trendingLoading, setTrendingLoading] = useState(false);
+
+  // 获取热门新闻
+  useEffect(() => {
+    const loadTrending = async () => {
+      setTrendingLoading(true);
+      try {
+        const data = await fetchTrendingNews();
+        setTrendingNews(data);
+      } catch (err) {
+        console.error('获取热门新闻失败:', err);
+      } finally {
+        setTrendingLoading(false);
+      }
+    };
+    loadTrending();
+  }, []);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -1137,6 +1157,52 @@ export default function App() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* 每日热门排行榜 */}
+            <div className="w-full max-w-5xl stagger-enter stagger-delay-6">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp size={14} className="text-amber-400" />
+                <h2 className="text-sm font-semibold text-slate-200">每日热门排行榜</h2>
+                {trendingLoading && <RefreshCw size={12} className="animate-spin text-slate-500" />}
+              </div>
+              
+              {Object.keys(trendingNews).length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {Object.values(trendingNews).map((topic) => (
+                    <div key={topic.id} className="card-surface rounded-xl p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{topic.icon}</span>
+                        <span className="text-xs font-semibold text-slate-200">{topic.name}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {topic.news && topic.news.slice(0, 3).map((item, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => { setInputValue(item.title); handleSearch(item.title); }}
+                            className="w-full text-left group"
+                          >
+                            <div className="flex items-start gap-1.5">
+                              <span className={`text-2xs font-bold mt-0.5 ${
+                                idx === 0 ? 'text-red-400' : 
+                                idx === 1 ? 'text-orange-400' : 
+                                'text-slate-500'
+                              }`}>{idx + 1}</span>
+                              <span className="text-2xs text-slate-400 group-hover:text-amber-400 line-clamp-1 transition-colors">
+                                {item.title}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500 text-xs">
+                  {trendingLoading ? '正在加载热门新闻...' : '暂无热门数据'}
+                </div>
+              )}
             </div>
           </div>
         )}
