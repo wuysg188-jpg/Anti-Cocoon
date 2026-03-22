@@ -713,15 +713,49 @@ export default function App() {
   const [trendingNews, setTrendingNews] = useState([]); // 各搜索引擎热榜
   const [trendingLoading, setTrendingLoading] = useState(false);
 
-  // 获取热门新闻
+  // 热榜数据（预设）
+  const TRENDING_DATA = [
+    {
+      id: 'tech',
+      name: '科技热榜',
+      icon: '💻',
+      color: '#4285F4',
+      items: ['ChatGPT', '人工智能', '芯片半导体', '苹果', '华为', '小米', 'SpaceX', '特斯拉机器人'],
+    },
+    {
+      id: 'finance',
+      name: '财经热榜',
+      icon: '💰',
+      color: '#34A853',
+      items: ['A股行情', '比特币', '央行利率', '茅台', '房地产', '黄金价格', '美联储', '人民币汇率'],
+    },
+    {
+      id: 'auto',
+      name: '汽车热榜',
+      icon: '🚗',
+      color: '#EA4335',
+      items: ['特斯拉', '比亚迪', '新能源汽车', '小米汽车', '自动驾驶', '理想汽车', '蔚来', '小鹏'],
+    },
+    {
+      id: 'global',
+      name: '国际热榜',
+      icon: '🌍',
+      color: '#FBBC05',
+      items: ['美国大选', '日本经济', '欧洲局势', '中东冲突', '俄乌战争', '韩国', '印度', '东南亚'],
+    },
+  ];
+
+  // 获取热门新闻（尝试在线获取，失败则用预设数据）
   useEffect(() => {
     const loadTrending = async () => {
       setTrendingLoading(true);
       try {
         const data = await fetchTrendingNews();
-        setTrendingNews(data);
+        if (data && data.length > 0) {
+          setTrendingNews(data);
+        }
       } catch (err) {
-        console.error('获取热门新闻失败:', err);
+        console.warn('获取在线热榜失败:', err);
       } finally {
         setTrendingLoading(false);
       }
@@ -1108,70 +1142,52 @@ export default function App() {
       {/* ══════════════════════ 主内容 ======================================= */}
       <main className="max-w-screen-2xl mx-auto px-4 py-6">
 
-        {/* ── 首页：各搜索引擎热榜 ── */}
+        {/* ── 首页：各分类热榜 ── */}
         {!loading && newsItems.length === 0 && !searchError && (
           <div className="animate-slide-up">
             {/* 标题 */}
             <div className="flex items-center gap-2 mb-6">
               <TrendingUp size={18} className="text-amber-400" />
               <h2 className="text-lg font-semibold text-slate-200">实时热榜</h2>
-              {trendingLoading && <RefreshCw size={14} className="animate-spin text-slate-500 ml-2" />}
             </div>
             
-            {trendingNews.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {trendingNews.map((feed) => (
-                  <div key={feed.id} className="card-surface rounded-2xl overflow-hidden">
-                    {/* 热榜标题 */}
-                    <div 
-                      className="px-4 py-3 flex items-center gap-2 border-b border-white/5"
-                      style={{ background: `${feed.color}15` }}
-                    >
-                      <span className="text-lg">{feed.icon}</span>
-                      <span className="text-sm font-semibold text-slate-200">{feed.name}</span>
-                      <span className="text-2xs text-slate-500 ml-auto">{feed.news?.length || 0} 条</span>
-                    </div>
-                    
-                    {/* 新闻列表 */}
-                    <div className="divide-y divide-white/5">
-                      {feed.news && feed.news.slice(0, 10).map((item, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => { setInputValue(item.title); handleSearch(item.title); }}
-                          className="w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors group flex items-start gap-3"
-                        >
-                          <span className={`text-sm font-bold min-w-[20px] text-right ${
-                            idx === 0 ? 'text-red-400' : 
-                            idx === 1 ? 'text-orange-400' : 
-                            idx === 2 ? 'text-yellow-400' :
-                            'text-slate-600'
-                          }`}>
-                            {idx + 1}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm text-slate-300 group-hover:text-amber-400 line-clamp-1 transition-colors">
-                              {item.title}
-                            </span>
-                            {item.sourceName && (
-                              <span className="text-2xs text-slate-600 mt-0.5 block">{item.sourceName}</span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {TRENDING_DATA.map((category) => (
+                <div key={category.id} className="card-surface rounded-2xl overflow-hidden">
+                  {/* 热榜标题 */}
+                  <div 
+                    className="px-4 py-3 flex items-center gap-2 border-b border-white/5"
+                    style={{ background: `${category.color}15` }}
+                  >
+                    <span className="text-lg">{category.icon}</span>
+                    <span className="text-sm font-semibold text-slate-200">{category.name}</span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 text-slate-500 text-sm">
-                {trendingLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <RefreshCw size={14} className="animate-spin" />
-                    正在加载热榜...
+                  
+                  {/* 热词列表 */}
+                  <div className="p-2">
+                    {category.items.map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => { setInputValue(item); handleSearch(item); }}
+                        className="w-full px-3 py-2 text-left hover:bg-white/5 rounded-lg transition-colors group flex items-center gap-3"
+                      >
+                        <span className={`text-sm font-bold min-w-[20px] text-right ${
+                          idx === 0 ? 'text-red-400' : 
+                          idx === 1 ? 'text-orange-400' : 
+                          idx === 2 ? 'text-yellow-400' :
+                          'text-slate-600'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                        <span className="text-sm text-slate-300 group-hover:text-amber-400 transition-colors">
+                          {item}
+                        </span>
+                      </button>
+                    ))}
                   </div>
-                ) : '暂无热榜数据，请稍后刷新'}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
