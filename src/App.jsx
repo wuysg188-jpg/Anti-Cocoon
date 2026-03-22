@@ -26,6 +26,7 @@ import {
   clearAllInsightCache,
   countCachedInsights,
 } from './utils/aiService.js';
+import { detectStockCode, getAllStocks } from './utils/stockCodes.js';
 
 // ─── 错误消息映射 ───────────────────────────────────────────────────────────
 const ERROR_MESSAGES = {
@@ -705,6 +706,8 @@ export default function App() {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [bookmarkSearch, setBookmarkSearch] = useState('');
   const [sortBy, setSortBy] = useState('date'); // 'date', 'source', 'category'
+  const [stockInfo, setStockInfo] = useState(null); // 当前搜索的股票信息
+  const [suggestions, setSuggestions] = useState([]); // 股票代码自动补全建议
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -770,6 +773,18 @@ export default function App() {
   const handleSearch = useCallback(async (kw) => {
     const trimmed = (kw || inputValue).trim();
     if (!trimmed) return;
+    
+    // 检测是否为股票代码
+    const stock = detectStockCode(trimmed);
+    setStockInfo(stock);
+    
+    // 如果是股票代码，使用优化的搜索词
+    let searchTerm = trimmed;
+    if (stock) {
+      // 使用公司名称和行业作为搜索词
+      searchTerm = `${stock.name} ${stock.sector}`;
+    }
+    
     setKeyword(trimmed);
     setLoading(true);
     setSearchError(null);
@@ -777,8 +792,10 @@ export default function App() {
     setGrouped({ all: [], uncategorized: [] });
     setActiveCategory('all');
     setShowBookmarks(false);
+    setSuggestions([]);
+    
     try {
-      const raw = await fetchLiveNews(trimmed);
+      const raw = await fetchLiveNews(searchTerm);
       // Sort by publication date descending (newest first)
       raw.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
       const classified = classifyNewsItems(raw);
@@ -791,6 +808,30 @@ export default function App() {
       setLoading(false);
     }
   }, [inputValue]);
+
+  // ── 输入变化处理（用于股票代码自动补全）──
+  const handleInputChange = (value) => {
+    setInputValue(value);
+    setStockInfo(null);
+    
+    // 检测输入是否可能是股票代码
+    if (value.length >= 2) {
+      const stock = detectStockCode(value);
+      if (stock) {
+        setStockInfo(stock);
+      }
+      
+      // 提供自动补全建议
+      const allStocks = getAllStocks();
+      const filtered = allStocks.filter(s => 
+        s.code.toLowerCase().includes(value.toLowerCase()) ||
+        s.name.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 5);
+      setSuggestions(filtered);
+    } else {
+      setSuggestions([]);
+    }
+  };
 
   // ── 错误消息处理 ──
   const getErrorInfo = (errorMessage) => {
@@ -878,11 +919,46 @@ export default function App() {
                 ref={searchInputRef}
                 type="text"
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => handleInputChange(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="搜索关键词：AI / 半导体 / SpaceX…"
+                placeholder="搜索关键词或股票代码：AI / 半导体 / 600519 / AAPL…"
                 className="w-full bg-ink-800 border border-white/8 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-400/50 focus:bg-ink-900 focus:shadow-amber-md focus:ring-1 focus:ring-amber-400/20 transition-all duration-300 ease-out placeholder:transition-opacity focus:placeholder:opacity-50"
               />
+              
+              {/* 股票信息提示 */}
+              {stockInfo && !loading && (
+                <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-ink-800 border border-amber-500/30 rounded-lg z-40 animate-fade-in">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-400 text-xs font-semibold">{stockInfo.market}</span>
+                    <span className="text-slate-300 text-xs font-medium">{stockInfo.name}</span>
+                    <span className="text-slate-500 text-2xs">({stockInfo.sector})</span>
+                  </div>
+                  <p className="text-slate-500 text-2xs mt-1">{stockInfo.fullName}</p>
+                </div>
+              )}
+              
+              {/* 自动补全建议 */}
+              {suggestions.length > 0 && !stockInfo && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-ink-800 border border-white/10 rounded-lg z-40 shadow-xl animate-fade-in overflow-hidden">
+                  {suggestions.map((s, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setInputValue(s.code);
+                        setSuggestions([]);
+                        handleSearch(s.code);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-white/5 transition-colors flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-400 text-2xs font-medium">{s.market}</span>
+                        <span className="text-slate-300 text-xs">{s.name}</span>
+                      </div>
+                      <span className="text-slate-500 text-2xs">{s.code}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               onClick={() => handleSearch()}
@@ -1172,7 +1248,16 @@ export default function App() {
               <div className="flex items-center gap-2 text-xs text-slate-500">
                 <TrendingUp size={13} className="text-amber-400" />
                 <span>
-                  「{keyword}」·
+                  {stockInfo ? (
+                    <>
+                      <span className="text-amber-400 font-medium">{stockInfo.market}</span>
+                      <span className="mx-1">·</span>
+                      <span className="text-slate-300 font-medium">{stockInfo.name}</span>
+                      <span className="text-slate-500 ml-1">({stockInfo.code})</span>
+                    </>
+                  ) : (
+                    <>「{keyword}」</>
+                  )}
                   <span className="text-slate-300 font-medium ml-1">{displayedItems.length}</span>
                   <span className="ml-1">条情报</span>
                 </span>
