@@ -254,48 +254,75 @@ export async function fetchLiveNews(keyword) {
     t.replace('{KEYWORD}', encodeURIComponent(kw))
   );
 
-  let lastError = null;
+  const WORKING_PROXY_KEY = 'anti_cocoon_working_proxy';
+  const TIMEOUT_MS = 5000; // 5秒超时
 
-  // Waterfall through multiple proxies
+  // 带超时的 fetch
+  const fetchWithTimeout = async (url, timeout) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': '*/*' },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
+    }
+  };
+
+  // 单个代理+RSS组合的请求
+  const tryProxy = async (proxyBase, rssUrl) => {
+    const proxyUrl = `${proxyBase}${encodeURIComponent(rssUrl)}`;
+    const response = await fetchWithTimeout(proxyUrl, TIMEOUT_MS);
+    
+    if (!response.ok) {
+      throw new Error(`代理节点故障 (HTTP ${response.status})`);
+    }
+
+    const text = await response.text();
+    if (!text || text.trim().length === 0) {
+      throw new Error('代理返回空白');
+    }
+
+    // allorigins sometimes returns JSON wrapping the content
+    let xmlText = text;
+    if (text.trimStart().startsWith('{')) {
+      try {
+        const json = JSON.parse(text);
+        xmlText = json.contents || json.data || text;
+      } catch { /* use as text */ }
+    }
+
+    const items = parseRssXml(xmlText, kw);
+    return { items, proxy: proxyBase };
+  };
+
+  // 构建所有请求组合
+  const requests = [];
   for (const proxyBase of CORS_PROXIES) {
     for (const rssUrl of rssUrls) {
-      const proxyUrl = `${proxyBase}${encodeURIComponent(rssUrl)}`;
-      try {
-        const response = await fetch(proxyUrl, {
-          method: 'GET',
-          headers: { 'Accept': '*/*' },
-        });
-
-        if (!response.ok) {
-          lastError = new Error(`代理节点故障 (HTTP ${response.status})`);
-          continue;
-        }
-
-        const text = await response.text();
-        if (!text || text.trim().length === 0) {
-          lastError = new Error('代理返回空白');
-          continue;
-        }
-
-        // allorigins sometimes returns JSON wrapping the content
-        let xmlText = text;
-        if (text.trimStart().startsWith('{')) {
-          try {
-            const json = JSON.parse(text);
-            xmlText = json.contents || json.data || text;
-          } catch { /* use as text */ }
-        }
-
-        const items = parseRssXml(xmlText, kw);
-        return items;
-      } catch (err) {
-        lastError = err;
-        // Proceed to next combination
-      }
+      requests.push(
+        tryProxy(proxyBase, rssUrl).catch(() => null)
+      );
     }
   }
 
-  throw lastError || new Error(`所有情报节点尝试失败。请检查网络或更换关键词。`);
+  // 并行请求所有组合
+  const results = await Promise.all(requests);
+  const success = results.find(r => r !== null);
+
+  if (success) {
+    // 记住成功的代理，下次优先使用
+    try { localStorage.setItem(WORKING_PROXY_KEY, success.proxy); } catch {}
+    return success.items;
+  }
+
+  throw new Error('所有情报节点尝试失败。请检查网络或更换关键词。');
 }
 
 // ─── 2. 单模型 AI 分析 ────────────────────────────────────────────────────────
