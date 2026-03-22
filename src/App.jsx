@@ -717,115 +717,88 @@ export default function App() {
   const [activeSource, setActiveSource] = useState('google'); // 当前选中的热榜源
   const [realTrendingData, setRealTrendingData] = useState({}); // 真实热榜数据
 
-  // 热榜源配置 - 使用真正的热榜 RSS
-  const TRENDING_SOURCES_CONFIG = [
-    { id: 'google', name: 'Google 热榜', icon: '🔍', color: '#4285F4' },
-    { id: 'google_tech', name: 'Google 科技', icon: '💻', color: '#34A853' },
-    { id: 'google_biz', name: 'Google 财经', icon: '💰', color: '#EA4335' },
-    { id: 'google_world', name: 'Google 国际', icon: '🌍', color: '#FBBC05' },
+  // 多个 CORS 代理
+  const CORS_PROXIES = [
+    'https://api.allorigins.win/raw?url=',
+    'https://api.codetabs.com/v1/proxy?quest=',
+    'https://corsproxy.io/?',
+  ];
+
+  // 热榜源配置
+  const TRENDING_SOURCES = [
+    { id: 'google', name: 'Google 热榜', icon: '🔍', url: 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans' },
+    { id: 'google_tech', name: '科技热榜', icon: '💻', url: 'https://news.google.com/rss/search?q=科技+AI&hl=zh-CN&gl=CN&ceid=CN:zh-Hans' },
+    { id: 'google_finance', name: '财经热榜', icon: '💰', url: 'https://news.google.com/rss/search?q=股票+财经&hl=zh-CN&gl=CN&ceid=CN:zh-Hans' },
+    { id: 'google_world', name: '国际热榜', icon: '🌍', url: 'https://news.google.com/rss/search?q=国际+世界&hl=en-US&gl=US&ceid=US:en' },
   ];
 
   // 热榜源列表
   const sourceList = [
     { id: 'all', name: '全部', icon: '📊' },
-    ...TRENDING_SOURCES_CONFIG,
+    ...TRENDING_SOURCES,
   ];
+
+  // 获取单个热榜源（尝试多个代理）
+  const fetchWithProxy = async (url) => {
+    for (const proxy of CORS_PROXIES) {
+      try {
+        const res = await fetch(proxy + encodeURIComponent(url), { 
+          signal: AbortSignal.timeout(6000) 
+        });
+        if (res.ok) {
+          const text = await res.text();
+          if (text && text.length > 100) {
+            const items = parseRssXml(text, '');
+            if (items.length > 0) {
+              return items;
+            }
+          }
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    return [];
+  };
 
   // 获取热榜数据
   useEffect(() => {
-    const loadRealTrending = async () => {
+    const loadTrending = async () => {
       setTrendingLoading(true);
       const results = {};
-      const proxy = 'https://api.allorigins.win/raw?url=';
 
-      // Google 首页热榜
-      try {
-        const res = await fetch(proxy + encodeURIComponent('https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans'), { signal: AbortSignal.timeout(8000) });
-        if (res.ok) {
-          const text = await res.text();
-          const items = parseRssXml(text, '');
-          results.google = items.slice(0, 20).map((item, idx) => ({
-            rank: idx + 1,
-            title: item.title,
-            link: item.link,
-            source: item.sourceName,
-            pubDate: item.pubDate,
-            hot: `${Math.floor(1000 - idx * 40 + Math.random() * 30)}万`,
-          }));
-        }
-      } catch (e) { console.warn('Google 热榜失败:', e); }
+      // 并行获取所有热榜源
+      const promises = TRENDING_SOURCES.map(async (source) => {
+        const items = await fetchWithProxy(source.url);
+        results[source.id] = items.slice(0, 20).map((item, idx) => ({
+          rank: idx + 1,
+          title: item.title,
+          link: item.link,
+          source: item.sourceName,
+          pubDate: item.pubDate,
+          hot: `${Math.floor((1000 - idx * 40) * (0.8 + Math.random() * 0.4))}万`,
+        }));
+      });
 
-      // Google 科技热榜
-      try {
-        const res = await fetch(proxy + encodeURIComponent('https://news.google.com/rss/search?q=科技+AI+芯片&hl=zh-CN&gl=CN&ceid=CN:zh-Hans'), { signal: AbortSignal.timeout(8000) });
-        if (res.ok) {
-          const text = await res.text();
-          const items = parseRssXml(text, '');
-          results.google_tech = items.slice(0, 20).map((item, idx) => ({
-            rank: idx + 1,
-            title: item.title,
-            link: item.link,
-            source: item.sourceName,
-            pubDate: item.pubDate,
-            hot: `${Math.floor(800 - idx * 35 + Math.random() * 25)}万`,
-          }));
-        }
-      } catch (e) { console.warn('Google 科技失败:', e); }
-
-      // Google 财经热榜
-      try {
-        const res = await fetch(proxy + encodeURIComponent('https://news.google.com/rss/search?q=股票+财经+经济&hl=zh-CN&gl=CN&ceid=CN:zh-Hans'), { signal: AbortSignal.timeout(8000) });
-        if (res.ok) {
-          const text = await res.text();
-          const items = parseRssXml(text, '');
-          results.google_biz = items.slice(0, 20).map((item, idx) => ({
-            rank: idx + 1,
-            title: item.title,
-            link: item.link,
-            source: item.sourceName,
-            pubDate: item.pubDate,
-            hot: `${Math.floor(700 - idx * 30 + Math.random() * 20)}万`,
-          }));
-        }
-      } catch (e) { console.warn('Google 财经失败:', e); }
-
-      // Google 国际热榜
-      try {
-        const res = await fetch(proxy + encodeURIComponent('https://news.google.com/rss/search?q=国际+世界+外交&hl=en-US&gl=US&ceid=US:en'), { signal: AbortSignal.timeout(8000) });
-        if (res.ok) {
-          const text = await res.text();
-          const items = parseRssXml(text, '');
-          results.google_world = items.slice(0, 20).map((item, idx) => ({
-            rank: idx + 1,
-            title: item.title,
-            link: item.link,
-            source: item.sourceName,
-            pubDate: item.pubDate,
-            hot: `${Math.floor(600 - idx * 25 + Math.random() * 20)}万`,
-          }));
-        }
-      } catch (e) { console.warn('Google 国际失败:', e); }
-
+      await Promise.all(promises);
       setRealTrendingData(results);
       setTrendingLoading(false);
     };
 
-    loadRealTrending();
+    loadTrending();
   }, []);
 
   // 获取当前显示的热榜数据
   const getCurrentTrending = () => {
     if (activeSource === 'all') {
-      // 合并所有源的前5条
       const merged = [];
-      TRENDING_SOURCES_CONFIG.forEach(source => {
+      TRENDING_SOURCES.forEach(source => {
         const items = realTrendingData[source.id] || [];
         items.slice(0, 5).forEach(item => {
           merged.push({
             ...item,
             sourceName: source.name,
             sourceIcon: source.icon,
-            sourceColor: source.color,
           });
         });
       });
@@ -1014,8 +987,7 @@ export default function App() {
     { id: 'uncategorized', label: '未分类', icon: '📁' },
   ];
 
-  // ─── HOT_KEYWORDS 带搜索跳转 ──
-  const HOT_KEYWORDS = ['Nvidia', 'TSMC', 'DeepSeek', 'SpaceX', 'CRISPR', 'BYD', '量子计算', '新能源'];
+  const [realTrendingData, setRealTrendingData] = useState({}); // 真实热榜数据
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-base)' }}>
