@@ -641,15 +641,37 @@ const TRENDING_CACHE_KEY = 'anti_cocoon_trending';
 const TRENDING_CACHE_MAX_AGE = 30 * 60 * 1000; // 30分钟缓存
 
 /**
- * 热门话题分类配置
+ * 各搜索引擎热榜配置
  */
-const TRENDING_TOPICS = [
-  { id: 'tech', name: '科技', icon: '💻', keywords: ['AI', '人工智能', '芯片', '半导体'] },
-  { id: 'finance', name: '财经', icon: '💰', keywords: ['股市', 'A股', '港股', '美股'] },
-  { id: 'world', name: '国际', icon: '🌍', keywords: ['国际', '外交', '全球'] },
-  { id: 'china', name: '国内', icon: '🇨🇳', keywords: ['中国', '政策', '经济'] },
-  { id: 'stock', name: '个股', icon: '📈', keywords: ['茅台', '腾讯', '苹果', '特斯拉'] },
-  { id: 'energy', name: '新能源', icon: '⚡', keywords: ['新能源', '电动车', '光伏', '锂电'] },
+const SEARCH_ENGINE_FEEDS = [
+  {
+    id: 'google_zh',
+    name: 'Google 热榜',
+    icon: '🔍',
+    color: '#4285F4',
+    url: 'https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans',
+  },
+  {
+    id: 'google_en',
+    name: 'Google Trending',
+    icon: '🌐',
+    color: '#34A853',
+    url: 'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en',
+  },
+  {
+    id: 'bing_zh',
+    name: 'Bing 热榜',
+    icon: '🅱️',
+    color: '#00897B',
+    url: 'https://www.bing.com/news/search?q=trending&setlang=zh-CN&cc=CN&format=rss',
+  },
+  {
+    id: 'yahoo',
+    name: 'Yahoo 热榜',
+    icon: '💜',
+    color: '#6B3FA0',
+    url: 'https://news.yahoo.com/rss',
+  },
 ];
 
 /**
@@ -687,18 +709,16 @@ function writeTrendingCache(data) {
 }
 
 /**
- * 获取单个话题的热门新闻
+ * 获取单个RSS源的新闻
  */
-async function fetchTopicNews(keyword) {
+async function fetchSingleFeed(rssUrl, sourceName) {
   const TIMEOUT_MS = 5000;
   
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
     
-    const proxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(
-      `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans`
-    )}`;
+    const proxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(rssUrl)}`;
     
     const response = await fetch(proxyUrl, {
       method: 'GET',
@@ -721,16 +741,16 @@ async function fetchTopicNews(keyword) {
       } catch {}
     }
     
-    const items = parseRssXml(xmlText, keyword);
-    return items.slice(0, 5); // 每个话题取前5条
+    const items = parseRssXml(xmlText, '');
+    return items.slice(0, 10); // 每个源取前10条
   } catch {
     return [];
   }
 }
 
 /**
- * 获取每日热门新闻排行榜
- * @returns {Promise<Object>} 按分类组织的热门新闻
+ * 获取各搜索引擎热榜
+ * @returns {Promise<Array>} 各搜索引擎的热榜数据
  */
 export async function fetchTrendingNews() {
   // 检查缓存
@@ -739,30 +759,26 @@ export async function fetchTrendingNews() {
     return cached;
   }
 
-  const result = {};
-  
-  // 并行获取所有话题的新闻
-  const promises = TRENDING_TOPICS.map(async (topic) => {
-    const keyword = topic.keywords[Math.floor(Math.random() * topic.keywords.length)];
-    const items = await fetchTopicNews(keyword);
-    
-    if (items.length > 0) {
-      result[topic.id] = {
-        ...topic,
-        news: items.slice(0, 3), // 取前3条
-        keyword,
-      };
-    }
+  // 并行获取所有搜索引擎的热榜
+  const promises = SEARCH_ENGINE_FEEDS.map(async (feed) => {
+    const news = await fetchSingleFeed(feed.url, feed.name);
+    return {
+      ...feed,
+      news,
+    };
   });
+
+  const results = await Promise.all(promises);
   
-  await Promise.all(promises);
+  // 过滤掉没有新闻的源
+  const validResults = results.filter(r => r.news && r.news.length > 0);
   
   // 缓存结果
-  if (Object.keys(result).length > 0) {
-    writeTrendingCache(result);
+  if (validResults.length > 0) {
+    writeTrendingCache(validResults);
   }
   
-  return result;
+  return validResults;
 }
 
 /**

@@ -1108,59 +1108,70 @@ export default function App() {
       {/* ══════════════════════ 主内容 ======================================= */}
       <main className="max-w-screen-2xl mx-auto px-4 py-6">
 
-        {/* ── 欢迎屏（仅热门排行榜）── */}
+        {/* ── 首页：各搜索引擎热榜 ── */}
         {!loading && newsItems.length === 0 && !searchError && (
-          <div className="animate-slide-up py-8">
-            {/* 每日热门排行榜 */}
-            <div className="w-full">
-              <div className="flex items-center gap-2 mb-6">
-                <TrendingUp size={16} className="text-amber-400" />
-                <h2 className="text-base font-semibold text-slate-200">每日热门排行榜</h2>
-                {trendingLoading && <RefreshCw size={12} className="animate-spin text-slate-500" />}
-              </div>
-              
-              {Object.keys(trendingNews).length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  {Object.values(trendingNews).map((topic) => (
-                    <div key={topic.id} className="card-surface rounded-xl p-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{topic.icon}</span>
-                        <span className="text-sm font-semibold text-slate-200">{topic.name}</span>
-                      </div>
-                      <div className="space-y-2">
-                        {topic.news && topic.news.slice(0, 3).map((item, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => { setInputValue(item.title); handleSearch(item.title); }}
-                            className="w-full text-left group"
-                          >
-                            <div className="flex items-start gap-2">
-                              <span className={`text-xs font-bold mt-0.5 min-w-[16px] ${
-                                idx === 0 ? 'text-red-400' : 
-                                idx === 1 ? 'text-orange-400' : 
-                                'text-slate-500'
-                              }`}>{idx + 1}</span>
-                              <span className="text-xs text-slate-400 group-hover:text-amber-400 line-clamp-2 transition-colors leading-relaxed">
-                                {item.title}
-                              </span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20 text-slate-500 text-sm">
-                  {trendingLoading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <RefreshCw size={14} className="animate-spin" />
-                      正在加载热门新闻...
-                    </div>
-                  ) : '暂无热门数据，请稍后刷新'}
-                </div>
-              )}
+          <div className="animate-slide-up">
+            {/* 标题 */}
+            <div className="flex items-center gap-2 mb-6">
+              <TrendingUp size={18} className="text-amber-400" />
+              <h2 className="text-lg font-semibold text-slate-200">实时热榜</h2>
+              {trendingLoading && <RefreshCw size={14} className="animate-spin text-slate-500 ml-2" />}
             </div>
+            
+            {trendingNews.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {trendingNews.map((feed) => (
+                  <div key={feed.id} className="card-surface rounded-2xl overflow-hidden">
+                    {/* 热榜标题 */}
+                    <div 
+                      className="px-4 py-3 flex items-center gap-2 border-b border-white/5"
+                      style={{ background: `${feed.color}15` }}
+                    >
+                      <span className="text-lg">{feed.icon}</span>
+                      <span className="text-sm font-semibold text-slate-200">{feed.name}</span>
+                      <span className="text-2xs text-slate-500 ml-auto">{feed.news?.length || 0} 条</span>
+                    </div>
+                    
+                    {/* 新闻列表 */}
+                    <div className="divide-y divide-white/5">
+                      {feed.news && feed.news.slice(0, 10).map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => { setInputValue(item.title); handleSearch(item.title); }}
+                          className="w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors group flex items-start gap-3"
+                        >
+                          <span className={`text-sm font-bold min-w-[20px] text-right ${
+                            idx === 0 ? 'text-red-400' : 
+                            idx === 1 ? 'text-orange-400' : 
+                            idx === 2 ? 'text-yellow-400' :
+                            'text-slate-600'
+                          }`}>
+                            {idx + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm text-slate-300 group-hover:text-amber-400 line-clamp-1 transition-colors">
+                              {item.title}
+                            </span>
+                            {item.sourceName && (
+                              <span className="text-2xs text-slate-600 mt-0.5 block">{item.sourceName}</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 text-slate-500 text-sm">
+                {trendingLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCw size={14} className="animate-spin" />
+                    正在加载热榜...
+                  </div>
+                ) : '暂无热榜数据，请稍后刷新'}
+              </div>
+            )}
           </div>
         )}
 
