@@ -16,6 +16,7 @@ import {
   ChevronRight, Trash2, Eye, EyeOff, BrainCircuit, Sparkles,
   TrendingUp, Database, AlertCircle, CheckCircle2, Layers,
   BookMarked, ScanSearch, Filter, Rss, Zap, Sun, Moon,
+  Code, Github, Star, GitFork,
 } from 'lucide-react';
 import TranslateWidget from './components/TranslateWidget.jsx';
 import { CATEGORIES, classifyNewsItems, groupByCategory } from './utils/classifier.js';
@@ -30,6 +31,7 @@ import {
   parseRssXml,
 } from './utils/aiService.js';
 import { detectStockCode, getAllStocks } from './utils/stockCodes.js';
+import { searchOpenSource, formatNumber } from './utils/openSourceApi.js';
 
 // ─── 错误消息映射 ───────────────────────────────────────────────────────────
 const ERROR_MESSAGES = {
@@ -711,6 +713,8 @@ export default function App() {
   const [sortBy, setSortBy] = useState('date'); // 'date', 'source', 'category'
   const [stockInfo, setStockInfo] = useState(null); // 当前搜索的股票信息
   const [suggestions, setSuggestions] = useState([]); // 股票代码自动补全建议
+  const [openSourceResults, setOpenSourceResults] = useState(null); // 开源项目搜索结果
+  const [openSourceLoading, setOpenSourceLoading] = useState(false);
   const [trendingNews, setTrendingNews] = useState([]); // 各搜索引擎热榜
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [selectedNews, setSelectedNews] = useState(null); // 选中查看的新闻
@@ -891,20 +895,40 @@ export default function App() {
     setActiveCategory('all');
     setShowBookmarks(false);
     setSuggestions([]);
+    setOpenSourceResults(null);
     
-    try {
-      const raw = await fetchLiveNews(searchTerm);
-      // Sort by publication date descending (newest first)
-      raw.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-      const classified = classifyNewsItems(raw);
-      const groups = groupByCategory(classified);
-      setNewsItems(classified);
+    // 并行搜索新闻和开源项目
+    const [newsResult, openSourceResult] = await Promise.allSettled([
+      // 搜索新闻
+      (async () => {
+        const raw = await fetchLiveNews(searchTerm);
+        raw.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        return classifyNewsItems(raw);
+      })(),
+      // 搜索开源项目
+      (async () => {
+        setOpenSourceLoading(true);
+        const results = await searchOpenSource(trimmed);
+        setOpenSourceLoading(false);
+        return results;
+      })(),
+    ]);
+    
+    // 处理新闻结果
+    if (newsResult.status === 'fulfilled') {
+      const groups = groupByCategory(newsResult.value);
+      setNewsItems(newsResult.value);
       setGrouped(groups);
-    } catch (err) {
-      setSearchError(err.message || '搜索失败，请重试');
-    } finally {
-      setLoading(false);
+    } else {
+      setSearchError(newsResult.reason?.message || '搜索失败，请重试');
     }
+    
+    // 处理开源项目结果
+    if (openSourceResult.status === 'fulfilled' && openSourceResult.value.total > 0) {
+      setOpenSourceResults(openSourceResult.value);
+    }
+    
+    setLoading(false);
   }, [inputValue]);
 
   // ── 输入变化处理（用于股票代码自动补全）──
@@ -1519,6 +1543,145 @@ export default function App() {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ── 开源项目搜索结果 ── */}
+        {!loading && openSourceResults && openSourceResults.total > 0 && (
+          <div className="mt-8 animate-fade-in">
+            <div className="flex items-center gap-2 mb-4">
+              <Code size={16} className="text-amber-400" />
+              <h3 className="text-sm font-semibold text-slate-200">相关开源项目</h3>
+              <span className="text-2xs text-slate-500">({openSourceResults.total} 个结果)</span>
+            </div>
+
+            {/* GitHub 仓库 */}
+            {openSourceResults.github.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Github size={14} className="text-slate-400" />
+                  <span className="text-xs font-medium text-slate-400">GitHub 仓库</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {openSourceResults.github.map((repo) => (
+                    <a
+                      key={repo.id}
+                      href={repo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="card-surface rounded-xl p-4 hover:border-amber-500/30 transition-all group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={repo.owner.avatar}
+                          alt=""
+                          className="w-8 h-8 rounded-full"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium text-slate-200 group-hover:text-amber-400 transition-colors truncate">
+                            {repo.title}
+                          </h4>
+                          <p className="text-2xs text-slate-500 mt-1 line-clamp-2">
+                            {repo.description}
+                          </p>
+                          <div className="flex items-center gap-3 mt-2">
+                            {repo.language && (
+                              <span className="text-2xs text-slate-400 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                                {repo.language}
+                              </span>
+                            )}
+                            <span className="text-2xs text-slate-400 flex items-center gap-1">
+                              <Star size={10} />
+                              {formatNumber(repo.stars)}
+                            </span>
+                            <span className="text-2xs text-slate-400 flex items-center gap-1">
+                              <GitFork size={10} />
+                              {formatNumber(repo.forks)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* HuggingFace 模型 */}
+            {openSourceResults.huggingface.models.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <BrainCircuit size={14} className="text-yellow-400" />
+                  <span className="text-xs font-medium text-slate-400">HuggingFace 模型</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {openSourceResults.huggingface.models.map((model) => (
+                    <a
+                      key={model.id}
+                      href={model.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="card-surface rounded-xl p-3 hover:border-yellow-500/30 transition-all group"
+                    >
+                      <h4 className="text-sm font-medium text-slate-200 group-hover:text-yellow-400 transition-colors truncate">
+                        {model.title.split('/').pop()}
+                      </h4>
+                      <p className="text-2xs text-slate-500 mt-1">{model.description}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-2xs text-slate-400">
+                          ↓ {formatNumber(model.downloads)}
+                        </span>
+                        <span className="text-2xs text-slate-400">
+                          ♥ {formatNumber(model.likes)}
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* HuggingFace 数据集 */}
+            {openSourceResults.huggingface.datasets.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Database size={14} className="text-green-400" />
+                  <span className="text-xs font-medium text-slate-400">HuggingFace 数据集</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {openSourceResults.huggingface.datasets.map((dataset) => (
+                    <a
+                      key={dataset.id}
+                      href={dataset.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="card-surface rounded-xl p-3 hover:border-green-500/30 transition-all group"
+                    >
+                      <h4 className="text-sm font-medium text-slate-200 group-hover:text-green-400 transition-colors truncate">
+                        {dataset.title.split('/').pop()}
+                      </h4>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-2xs text-slate-400">
+                          ↓ {formatNumber(dataset.downloads)}
+                        </span>
+                        <span className="text-2xs text-slate-400">
+                          ♥ {formatNumber(dataset.likes)}
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 开源项目加载中 */}
+        {openSourceLoading && (
+          <div className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-sm">
+            <RefreshCw size={14} className="animate-spin" />
+            <span>正在搜索开源项目...</span>
           </div>
         )}
 
