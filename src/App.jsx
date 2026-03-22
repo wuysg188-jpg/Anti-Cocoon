@@ -27,6 +27,7 @@ import {
   countCachedInsights,
   fetchTrendingNews,
   getHotKeywords,
+  parseRssXml,
 } from './utils/aiService.js';
 import { detectStockCode, getAllStocks } from './utils/stockCodes.js';
 

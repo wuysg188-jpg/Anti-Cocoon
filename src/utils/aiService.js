@@ -272,7 +272,7 @@ const SYSTEM_PROMPT = `你是一位拥有全球视野的高级产业情报分析
  * @param {string} keyword  用于生成无结果时的错误消息
  * @returns {Array<object>}
  */
-function parseRssXml(xmlText, keyword) {
+export function parseRssXml(xmlText, keyword) {
   const parser = new DOMParser();
   const xml = parser.parseFromString(xmlText, 'application/xml');
 
