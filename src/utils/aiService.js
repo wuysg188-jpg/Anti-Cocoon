@@ -11,29 +11,23 @@
 // ─── 常量 ─────────────────────────────────────────────────────────────────────
 
 /**
- * allorigins.win — free CORS proxy that returns raw content of any URL.
- * We fetch the Google News RSS XML, then parse it client-side with DOMParser.
- *
- * Alternative proxy mirrors (if allorigins is down):
- *   https://corsproxy.io/?{encodedUrl}
- *   https://api.codetabs.com/v1/proxy?quest={url}
+ * CORS 代理列表 - 优先使用最快的
  */
 const CORS_PROXIES = [
-  'https://api.allorigins.win/raw?url=',
-  'https://api.allorigins.win/get?url=',
+  'https://corsproxy.io/?',
   'https://api.codetabs.com/v1/proxy?quest=',
-  'https://corsproxy.io/?'
+  'https://api.allorigins.win/raw?url=',
 ];
 
-// We use multiple URL formats for Google News to maximise hit rate
+// Google News RSS URL
 const GOOGLE_NEWS_RSS_URLS = [
-  // English global (most reliable with CORS proxies)
   'https://news.google.com/rss/search?q={KEYWORD}&hl=en-US&gl=US&ceid=US:en',
-  // Plain fallback
   'https://news.google.com/rss/search?q={KEYWORD}',
 ];
 
 const CACHE_PREFIX = 'anti_cocoon_insight_';
+const NEWS_CACHE_PREFIX = 'anti_cocoon_news_';
+const NEWS_CACHE_MAX_AGE = 30 * 60 * 1000; // 30分钟缓存
 
 /** 单次发送给 AI 的最大新闻文本字符数（防止 Token 爆炸） */
 const MAX_CONTENT_CHARS = 3000;
@@ -146,6 +140,42 @@ function clearOldestCache() {
 }
 
 /**
+ * 读取新闻缓存
+ */
+function readNewsCache(keyword) {
+  try {
+    const key = NEWS_CACHE_PREFIX + keyword.toLowerCase().trim();
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    
+    const entry = JSON.parse(raw);
+    const age = Date.now() - entry.timestamp;
+    
+    if (age > NEWS_CACHE_MAX_AGE) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return entry.items;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 写入新闻缓存
+ */
+function writeNewsCache(keyword, items) {
+  try {
+    const key = NEWS_CACHE_PREFIX + keyword.toLowerCase().trim();
+    const entry = {
+      items,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(key, JSON.stringify(entry));
+  } catch {}
+}
+
+/**
  * 为新闻条目生成唯一 ID（基于链接或标题哈希）
  * @param {{ link?: string, title?: string }} item
  * @returns {string}
@@ -250,12 +280,20 @@ export async function fetchLiveNews(keyword) {
   }
 
   const kw = keyword.trim();
+
+  // 首先检查缓存
+  const cached = readNewsCache(kw);
+  if (cached && cached.length > 0) {
+    console.log('使用缓存的搜索结果');
+    return cached;
+  }
+
   const rssUrls = GOOGLE_NEWS_RSS_URLS.map((t) =>
     t.replace('{KEYWORD}', encodeURIComponent(kw))
   );
 
   const WORKING_PROXY_KEY = 'anti_cocoon_working_proxy';
-  const TIMEOUT_MS = 5000; // 5秒超时
+  const TIMEOUT_MS = 3000; // 3秒超时
 
   // 带超时的 fetch
   const fetchWithTimeout = async (url, timeout) => {
@@ -319,6 +357,8 @@ export async function fetchLiveNews(keyword) {
   if (success) {
     // 记住成功的代理，下次优先使用
     try { localStorage.setItem(WORKING_PROXY_KEY, success.proxy); } catch {}
+    // 缓存结果
+    writeNewsCache(kw, success.items);
     return success.items;
   }
 
