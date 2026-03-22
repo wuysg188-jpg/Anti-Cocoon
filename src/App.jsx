@@ -1108,87 +1108,39 @@ export default function App() {
       {/* ══════════════════════ 主内容 ======================================= */}
       <main className="max-w-screen-2xl mx-auto px-4 py-6">
 
-        {/* ── 欢迎屏 ── */}
+        {/* ── 欢迎屏（仅热门排行榜）── */}
         {!loading && newsItems.length === 0 && !searchError && (
-          <div className="animate-slide-up flex flex-col items-center py-20 gap-10">
-            {/* Hero */}
-            <div className="text-center space-y-4">
-              <div className="inline-flex items-center gap-2 text-2xs font-semibold px-3 py-1.5 rounded-full border border-amber-400/25 text-amber-400 bg-amber-400/6 mb-4 shadow-sm">
-                <span className="signal-dot-amber w-1.5 h-1.5 rounded-full bg-amber-400" />
-                Breaking the Information Cocoon
-              </div>
-              <h1 className="text-5xl sm:text-6xl font-bold tracking-tight stagger-enter stagger-delay-1">
-                <span className="text-slate-100">全球情报，</span><br />
-                <span className="text-amber-400" style={{ textShadow: '0 4px 24px rgba(251,191,36,0.3)' }}>多维解构</span>
-              </h1>
-              <p className="text-slate-500 text-base max-w-lg mx-auto leading-relaxed">
-                输入任意关键词，AI 实时聚合全球资讯并以多个大模型交叉审查，
-                <br className="hidden sm:block" />
-                打破信息茧房，直达事件底层逻辑。
-              </p>
-            </div>
-
-            {/* Feature strip */}
-            <div className="grid grid-cols-3 gap-3 max-w-lg w-full">
-              {[
-                { icon: <Rss size={16} />,          label: '实时聚合',  desc: 'Google News 全球源' },
-                { icon: <Filter size={16} />,        label: '10维分类',  desc: '微秒级本地归档' },
-                { icon: <ScanSearch size={16} />,    label: 'AI 交叉审',  desc: '多模型并发互验' },
-              ].map((f, i) => (
-                <div key={i} className={`card-surface rounded-xl p-3 text-center space-y-1.5 stagger-enter stagger-delay-${i + 2}`}>
-                  <div className="text-amber-400 flex justify-center">{f.icon}</div>
-                  <div className="text-xs font-semibold text-slate-200">{f.label}</div>
-                  <div className="text-2xs text-slate-500">{f.desc}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Hot keywords */}
-            <div className="flex flex-col items-center gap-3 stagger-enter stagger-delay-5">
-              <p className="text-2xs text-slate-600 uppercase tracking-wider font-semibold">热门情报词</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {HOT_KEYWORDS.map((kw) => (
-                  <button
-                    key={kw}
-                    onClick={() => { setInputValue(kw); handleSearch(kw); }}
-                    className="px-3 py-1.5 rounded-lg text-xs border border-white/8 text-slate-500 hover:border-amber-400/35 hover:text-amber-400 hover:-translate-y-0.5 hover:shadow-amber-sm transition-all duration-300"
-                  >
-                    {kw}
-                  </button>
-                ))}
-              </div>
-            </div>
-
+          <div className="animate-slide-up py-8">
             {/* 每日热门排行榜 */}
-            <div className="w-full max-w-5xl stagger-enter stagger-delay-6">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp size={14} className="text-amber-400" />
-                <h2 className="text-sm font-semibold text-slate-200">每日热门排行榜</h2>
+            <div className="w-full">
+              <div className="flex items-center gap-2 mb-6">
+                <TrendingUp size={16} className="text-amber-400" />
+                <h2 className="text-base font-semibold text-slate-200">每日热门排行榜</h2>
                 {trendingLoading && <RefreshCw size={12} className="animate-spin text-slate-500" />}
               </div>
               
               {Object.keys(trendingNews).length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   {Object.values(trendingNews).map((topic) => (
-                    <div key={topic.id} className="card-surface rounded-xl p-3 space-y-2">
+                    <div key={topic.id} className="card-surface rounded-xl p-4 space-y-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{topic.icon}</span>
-                        <span className="text-xs font-semibold text-slate-200">{topic.name}</span>
+                        <span className="text-xl">{topic.icon}</span>
+                        <span className="text-sm font-semibold text-slate-200">{topic.name}</span>
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {topic.news && topic.news.slice(0, 3).map((item, idx) => (
                           <button
                             key={idx}
                             onClick={() => { setInputValue(item.title); handleSearch(item.title); }}
                             className="w-full text-left group"
                           >
-                            <div className="flex items-start gap-1.5">
-                              <span className={`text-2xs font-bold mt-0.5 ${
+                            <div className="flex items-start gap-2">
+                              <span className={`text-xs font-bold mt-0.5 min-w-[16px] ${
                                 idx === 0 ? 'text-red-400' : 
                                 idx === 1 ? 'text-orange-400' : 
                                 'text-slate-500'
                               }`}>{idx + 1}</span>
-                              <span className="text-2xs text-slate-400 group-hover:text-amber-400 line-clamp-1 transition-colors">
+                              <span className="text-xs text-slate-400 group-hover:text-amber-400 line-clamp-2 transition-colors leading-relaxed">
                                 {item.title}
                               </span>
                             </div>
@@ -1199,8 +1151,13 @@ export default function App() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-slate-500 text-xs">
-                  {trendingLoading ? '正在加载热门新闻...' : '暂无热门数据'}
+                <div className="text-center py-20 text-slate-500 text-sm">
+                  {trendingLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw size={14} className="animate-spin" />
+                      正在加载热门新闻...
+                    </div>
+                  ) : '暂无热门数据，请稍后刷新'}
                 </div>
               )}
             </div>
