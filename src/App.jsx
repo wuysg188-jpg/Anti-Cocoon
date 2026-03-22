@@ -987,8 +987,6 @@ export default function App() {
     { id: 'uncategorized', label: '未分类', icon: '📁' },
   ];
 
-  const [realTrendingData, setRealTrendingData] = useState({}); // 真实热榜数据
-
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-base)' }}>
 
