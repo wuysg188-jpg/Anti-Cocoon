@@ -21,10 +21,25 @@ const CORS_PROXIES = [
 
 /**
  * 多新闻源 RSS 配置
- * 提供多种语言和来源，确保结果新鲜多样
+ * 使用可靠的搜索型 RSS 源
  */
 const NEWS_SOURCES = {
-  // Google News - 英文（最快最新）
+  // Google News - 多地区中文搜索（最可靠）
+  google_zh_cn: {
+    name: 'Google News (中文)',
+    urls: [
+      'https://news.google.com/rss/search?q={KEYWORD}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans',
+    ],
+    priority: 1,
+  },
+  google_zh_tw: {
+    name: 'Google News (繁体)',
+    urls: [
+      'https://news.google.com/rss/search?q={KEYWORD}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
+    ],
+    priority: 1,
+  },
+  // Google News - 英文
   google_en: {
     name: 'Google News (EN)',
     urls: [
@@ -32,27 +47,19 @@ const NEWS_SOURCES = {
     ],
     priority: 1,
   },
-  // Google News - 中文
-  google_zh: {
-    name: 'Google News (中文)',
+  // Bing News - 中文
+  bing_zh: {
+    name: 'Bing News (中文)',
     urls: [
-      'https://news.google.com/rss/search?q={KEYWORD}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans',
+      'https://www.bing.com/news/search?q={KEYWORD}&setlang=zh-CN&cc=CN&format=rss',
     ],
-    priority: 1,
+    priority: 2,
   },
   // Bing News - 英文
   bing_en: {
     name: 'Bing News',
     urls: [
       'https://www.bing.com/news/search?q={KEYWORD}&format=rss',
-    ],
-    priority: 2,
-  },
-  // Bing News - 中文
-  bing_zh: {
-    name: 'Bing News (中文)',
-    urls: [
-      'https://www.bing.com/news/search?q={KEYWORD}&setlang=zh-CN&format=rss',
     ],
     priority: 2,
   },
@@ -64,94 +71,11 @@ const NEWS_SOURCES = {
     ],
     priority: 3,
   },
-  // 新华网 - 中国官方通讯社
-  xinhua: {
-    name: '新华网',
-    urls: [
-      'http://www.news.cn/rss/politics.xml',
-      'http://www.news.cn/rss/home.xml',
-    ],
-    priority: 3,
-  },
-  // 人民网 - 人民日报
-  people: {
-    name: '人民网',
-    urls: [
-      'http://www.people.com.cn/rss/politics.xml',
-      'http://www.people.com.cn/rss/home.xml',
-    ],
-    priority: 3,
-  },
-  // 央视网
-  cctv: {
-    name: '央视新闻',
-    urls: [
-      'https://news.cctv.com/2019/07/gaiban/cmsdatainterface/default/news_index_1.jsonp',
-    ],
-    priority: 3,
-  },
-  // 观察者网
-  guancha: {
-    name: '观察者网',
-    urls: [
-      'https://www.guancha.cn/rss/finance.xml',
-      'https://www.guancha.cn/rss/politics.xml',
-    ],
-    priority: 3,
-  },
-  // 澎湃新闻
-  thepaper: {
-    name: '澎湃新闻',
-    urls: [
-      'https://rsshub.app/thepaper/featured',
-    ],
-    priority: 3,
-  },
-  // 财新网
-  caixin: {
-    name: '财新网',
-    urls: [
-      'https://rsshub.app/caixin/latest',
-    ],
-    priority: 3,
-  },
-  // BBC News
-  bbc: {
-    name: 'BBC News',
-    urls: [
-      'https://feeds.bbci.co.uk/news/rss.xml',
-    ],
-    priority: 4,
-  },
-  // TechCrunch (科技新闻)
-  techcrunch: {
-    name: 'TechCrunch',
-    urls: [
-      'https://techcrunch.com/feed/',
-    ],
-    priority: 4,
-  },
-  // 36氪 - 科技商业
-  kr36: {
-    name: '36氪',
-    urls: [
-      'https://36kr.com/feed',
-    ],
-    priority: 3,
-  },
-  // 少数派 - 科技生活
-  sspai: {
-    name: '少数派',
-    urls: [
-      'https://sspai.com/feed',
-    ],
-    priority: 4,
-  },
 };
 
 const CACHE_PREFIX = 'anti_cocoon_insight_';
 const NEWS_CACHE_PREFIX = 'anti_cocoon_news_';
-const NEWS_CACHE_MAX_AGE = 15 * 60 * 1000; // 15分钟缓存（更短，保证新鲜）
+const NEWS_CACHE_MAX_AGE = 15 * 60 * 1000; // 15分钟缓存
 
 /** 单次发送给 AI 的最大新闻文本字符数（防止 Token 爆炸） */
 const MAX_CONTENT_CHARS = 3000;
@@ -441,17 +365,13 @@ export async function fetchLiveNews(keyword) {
 
   const kw = keyword.trim();
 
-  // 首先检查缓存
+  // 检查缓存
   const cached = readNewsCache(kw);
   if (cached && cached.length > 0) {
-    console.log('使用缓存的搜索结果');
     return cached;
   }
 
-  // 检测是否包含中文字符
-  const isChinese = /[\u4e00-\u9fa5]/.test(kw);
-
-  const TIMEOUT_MS = 5000; // 5秒超时
+  const TIMEOUT_MS = 6000;
 
   // 带超时的 fetch
   const fetchWithTimeout = async (url, timeout) => {
@@ -471,9 +391,8 @@ export async function fetchLiveNews(keyword) {
     }
   };
 
-  // 单个请求的处理
-  const trySource = async (rssUrl, sourceName, needFilter = false) => {
-    // 使用代理
+  // 尝试单个新闻源
+  const trySource = async (rssUrl, sourceName) => {
     const proxyBase = CORS_PROXIES[0];
     const proxyUrl = `${proxyBase}${encodeURIComponent(rssUrl)}`;
     
@@ -497,79 +416,25 @@ export async function fetchLiveNews(keyword) {
       } catch { /* use as text */ }
     }
 
-    let items = parseRssXml(xmlText, kw);
-    
-    // 如果是固定 RSS 源，需要在客户端过滤关键词
-    if (needFilter && items.length > 0) {
-      const kwLower = kw.toLowerCase();
-      items = items.filter(item => {
-        const titleLower = (item.title || '').toLowerCase();
-        const descLower = (item.description || '').toLowerCase();
-        return titleLower.includes(kwLower) || descLower.includes(kwLower);
-      });
-    }
-    
+    const items = parseRssXml(xmlText, kw);
     return items.map(item => ({ ...item, sourceType: sourceName }));
   };
 
-  // 构建所有新闻源的请求
+  // 并行请求所有新闻源
   const allRequests = [];
   
-  // 判断 URL 是否支持关键词搜索
-  const isSearchableUrl = (url) => {
-    return url.includes('{KEYWORD}') || url.includes('search') || url.includes('?q=');
-  };
-
-  // 高优先级源：支持搜索的新闻源
   for (const [key, source] of Object.entries(NEWS_SOURCES)) {
-    if (source.priority <= 2) {
-      for (const urlTemplate of source.urls) {
-        if (isSearchableUrl(urlTemplate)) {
-          const url = urlTemplate.replace('{KEYWORD}', encodeURIComponent(kw));
-          allRequests.push(
-            trySource(url, source.name, false).catch(() => [])
-          );
-        }
-      }
+    for (const urlTemplate of source.urls) {
+      const url = urlTemplate.replace('{KEYWORD}', encodeURIComponent(kw));
+      allRequests.push(
+        trySource(url, source.name).catch(() => [])
+      );
     }
   }
 
-  // 如果是中文关键词，添加中文新闻源
-  if (isChinese) {
-    for (const [key, source] of Object.entries(NEWS_SOURCES)) {
-      if (source.priority === 3 && ['新华网', '人民网', '观察者网', '澎湃新闻', '财新网', '36氪'].includes(source.name)) {
-        for (const url of source.urls) {
-          // 固定 RSS 源，需要客户端过滤
-          allRequests.push(
-            trySource(url, source.name, true).catch(() => [])
-          );
-        }
-      }
-    }
-  }
-
-  // 并行请求所有高优先级源
-  const highPriorityResults = await Promise.all(allRequests);
-  let allItems = highPriorityResults.flat();
-
-  // 如果结果不足，请求低优先级源
-  if (allItems.length < 5) {
-    const lowPriorityRequests = [];
-    for (const [key, source] of Object.entries(NEWS_SOURCES)) {
-      if (source.priority > 2) {
-        for (const urlTemplate of source.urls) {
-          if (isSearchableUrl(urlTemplate)) {
-            const url = urlTemplate.replace('{KEYWORD}', encodeURIComponent(kw));
-            lowPriorityRequests.push(
-              trySource(url, source.name, false).catch(() => [])
-            );
-          }
-        }
-      }
-    }
-    const lowPriorityResults = await Promise.all(lowPriorityRequests);
-    allItems = [...allItems, ...lowPriorityResults.flat()];
-  }
+  // 等待所有请求完成
+  const results = await Promise.all(allRequests);
+  let allItems = results.flat();
 
   // 去重（基于链接）
   const seen = new Set();
