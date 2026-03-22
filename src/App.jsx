@@ -714,96 +714,105 @@ export default function App() {
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [selectedNews, setSelectedNews] = useState(null); // 选中查看的新闻
   const [activeSource, setActiveSource] = useState('all'); // 当前选中的热榜源
+  const [realTrendingData, setRealTrendingData] = useState({}); // 真实热榜数据
 
-  // 各搜索引擎热榜数据
-  const TRENDING_SOURCES = {
-    google: {
-      name: 'Google 热榜',
-      icon: '🔍',
-      color: '#4285F4',
-      items: [
-        { rank: 1, title: 'ChatGPT发布最新版本', tag: '科技', hot: '987万' },
-        { rank: 2, title: 'A股三大指数集体上涨', tag: '财经', hot: '856万' },
-        { rank: 3, title: '特斯拉宣布降价', tag: '汽车', hot: '743万' },
-        { rank: 4, title: '苹果Vision Pro正式发售', tag: '科技', hot: '698万' },
-        { rank: 5, title: '比特币突破新高', tag: '财经', hot: '654万' },
-        { rank: 6, title: '比亚迪销量创新高', tag: '汽车', hot: '587万' },
-        { rank: 7, title: '央行发布最新政策', tag: '财经', hot: '523万' },
-        { rank: 8, title: '华为新品发布会', tag: '科技', hot: '498万' },
-        { rank: 9, title: '新能源汽车补贴政策', tag: '汽车', hot: '456万' },
-        { rank: 10, title: '美国大选最新民调', tag: '国际', hot: '423万' },
-      ],
-    },
-    bing: {
-      name: 'Bing 热榜',
-      icon: '🅱️',
-      color: '#00897B',
-      items: [
-        { rank: 1, title: '小米汽车正式交付', tag: '汽车', hot: '876万' },
-        { rank: 2, title: 'SpaceX火箭发射成功', tag: '科技', hot: '765万' },
-        { rank: 3, title: '茅台股价再创新高', tag: '财经', hot: '654万' },
-        { rank: 4, title: '日本央行调整利率', tag: '国际', hot: '543万' },
-        { rank: 5, title: '房地产新政策出台', tag: '财经', hot: '498万' },
-        { rank: 6, title: '人工智能新突破', tag: '科技', hot: '432万' },
-        { rank: 7, title: '理想汽车销量飙升', tag: '汽车', hot: '387万' },
-        { rank: 8, title: '俄乌局势最新进展', tag: '国际', hot: '345万' },
-        { rank: 9, title: '芯片产业迎来新机遇', tag: '科技', hot: '312万' },
-        { rank: 10, title: '黄金价格创历史新高', tag: '财经', hot: '287万' },
-      ],
-    },
-    yahoo: {
-      name: 'Yahoo 热榜',
-      icon: '💜',
-      color: '#6B3FA0',
-      items: [
-        { rank: 1, title: '苹果发布新iPhone', tag: '科技', hot: '765万' },
-        { rank: 2, title: '美联储利率决议', tag: '财经', hot: '698万' },
-        { rank: 3, title: '特斯拉自动驾驶事故', tag: '汽车', hot: '632万' },
-        { rank: 4, title: '欧洲能源危机', tag: '国际', hot: '576万' },
-        { rank: 5, title: '亚马逊财报超预期', tag: '财经', hot: '521万' },
-        { rank: 6, title: 'OpenAI融资成功', tag: '科技', hot: '478万' },
-        { rank: 7, title: '蔚来汽车裁员', tag: '汽车', hot: '432万' },
-        { rank: 8, title: '中东局势紧张', tag: '国际', hot: '398万' },
-        { rank: 9, title: '5G普及加速', tag: '科技', hot: '365万' },
-        { rank: 10, title: '房地产市场回暖', tag: '财经', hot: '343万' },
-      ],
-    },
-    weibo: {
-      name: '微博热搜',
-      icon: '🔥',
-      color: '#FF8200',
-      items: [
-        { rank: 1, title: '某明星官宣结婚', tag: '娱乐', hot: '1234万', isHot: true },
-        { rank: 2, title: '高考成绩公布', tag: '教育', hot: '1098万', isHot: true },
-        { rank: 3, title: '世界杯决赛', tag: '体育', hot: '987万' },
-        { rank: 4, title: '某电视剧大结局', tag: '娱乐', hot: '876万' },
-        { rank: 5, title: '考研成绩查询', tag: '教育', hot: '765万' },
-        { rank: 6, title: '春节档电影', tag: '娱乐', hot: '654万' },
-        { rank: 7, title: '高考作文题', tag: '教育', hot: '598万' },
-        { rank: 8, title: '某综艺节目', tag: '娱乐', hot: '543万' },
-        { rank: 9, title: '世界杯赛程', tag: '体育', hot: '498万' },
-        { rank: 10, title: '明星演唱会', tag: '娱乐', hot: '456万' },
-      ],
-    },
-  };
+  // 热榜源配置
+  const TRENDING_SOURCES_CONFIG = [
+    { id: 'google', name: 'Google 热榜', icon: '🔍', color: '#4285F4' },
+    { id: 'bing', name: 'Bing 热榜', icon: '🅱️', color: '#00897B' },
+    { id: 'yahoo', name: 'Yahoo 热榜', icon: '💜', color: '#6B3FA0' },
+  ];
 
   // 热榜源列表
   const sourceList = [
     { id: 'all', name: '全部', icon: '📊' },
-    ...Object.entries(TRENDING_SOURCES).map(([id, source]) => ({
-      id,
-      name: source.name,
-      icon: source.icon,
-    })),
+    ...TRENDING_SOURCES_CONFIG,
   ];
+
+  // 获取真实热榜数据
+  useEffect(() => {
+    const loadRealTrending = async () => {
+      setTrendingLoading(true);
+      const results = {};
+
+      // 获取 Google 热榜
+      try {
+        const googleRes = await fetch(
+          `https://corsproxy.io/?${encodeURIComponent('https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans')}`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (googleRes.ok) {
+          const text = await googleRes.text();
+          const items = parseRssXml(text, '');
+          results.google = items.slice(0, 15).map((item, idx) => ({
+            rank: idx + 1,
+            title: item.title,
+            link: item.link,
+            source: item.sourceName,
+            pubDate: item.pubDate,
+          }));
+        }
+      } catch (err) {
+        console.warn('Google 热榜获取失败:', err);
+      }
+
+      // 获取 Bing 热榜
+      try {
+        const bingRes = await fetch(
+          `https://corsproxy.io/?${encodeURIComponent('https://www.bing.com/news/search?q=trending&setlang=zh-CN&format=rss')}`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (bingRes.ok) {
+          const text = await bingRes.text();
+          const items = parseRssXml(text, '');
+          results.bing = items.slice(0, 15).map((item, idx) => ({
+            rank: idx + 1,
+            title: item.title,
+            link: item.link,
+            source: item.sourceName,
+            pubDate: item.pubDate,
+          }));
+        }
+      } catch (err) {
+        console.warn('Bing 热榜获取失败:', err);
+      }
+
+      // 获取 Yahoo 热榜
+      try {
+        const yahooRes = await fetch(
+          `https://corsproxy.io/?${encodeURIComponent('https://news.yahoo.com/rss')}`,
+          { signal: AbortSignal.timeout(5000) }
+        );
+        if (yahooRes.ok) {
+          const text = await yahooRes.text();
+          const items = parseRssXml(text, '');
+          results.yahoo = items.slice(0, 15).map((item, idx) => ({
+            rank: idx + 1,
+            title: item.title,
+            link: item.link,
+            source: item.sourceName,
+            pubDate: item.pubDate,
+          }));
+        }
+      } catch (err) {
+        console.warn('Yahoo 热榜获取失败:', err);
+      }
+
+      setRealTrendingData(results);
+      setTrendingLoading(false);
+    };
+
+    loadRealTrending();
+  }, []);
 
   // 获取当前显示的热榜数据
   const getCurrentTrending = () => {
     if (activeSource === 'all') {
-      // 合并所有源的前3条
+      // 合并所有源的前5条
       const merged = [];
-      Object.values(TRENDING_SOURCES).forEach(source => {
-        source.items.slice(0, 3).forEach(item => {
+      TRENDING_SOURCES_CONFIG.forEach(source => {
+        const items = realTrendingData[source.id] || [];
+        items.slice(0, 5).forEach(item => {
           merged.push({
             ...item,
             sourceName: source.name,
@@ -814,26 +823,9 @@ export default function App() {
       });
       return merged;
     }
-    return TRENDING_SOURCES[activeSource]?.items || [];
+    const items = realTrendingData[activeSource] || [];
+    return items;
   };
-
-  // 获取热门新闻（尝试在线获取）
-  useEffect(() => {
-    const loadTrending = async () => {
-      setTrendingLoading(true);
-      try {
-        const data = await fetchTrendingNews();
-        if (data && data.length > 0) {
-          setTrendingNews(data);
-        }
-      } catch (err) {
-        console.warn('获取在线热榜失败，使用预设数据');
-      } finally {
-        setTrendingLoading(false);
-      }
-    };
-    loadTrending();
-  }, []);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -1214,7 +1206,7 @@ export default function App() {
       {/* ══════════════════════ 主内容 ======================================= */}
       <main className="max-w-screen-2xl mx-auto px-4 py-6">
 
-        {/* ── 首页：分搜索引擎热榜 ── */}
+        {/* ── 首页：真实热榜 ── */}
         {!loading && newsItems.length === 0 && !searchError && !selectedNews && (
           <div className="animate-slide-up max-w-3xl mx-auto">
             {/* 标题 */}
@@ -1223,9 +1215,17 @@ export default function App() {
                 <TrendingUp size={18} className="text-amber-400" />
                 <h2 className="text-lg font-semibold text-slate-200">实时热榜</h2>
               </div>
-              <span className="text-2xs text-slate-500">
-                {trendingLoading ? '更新中...' : '刚刚更新'}
-              </span>
+              <button
+                onClick={() => {
+                  setRealTrendingData({});
+                  // 重新获取
+                  window.location.reload();
+                }}
+                className="text-2xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1"
+              >
+                <RefreshCw size={12} className={trendingLoading ? 'animate-spin' : ''} />
+                {trendingLoading ? '更新中...' : '刷新'}
+              </button>
             </div>
 
             {/* 热榜源切换标签 */}
@@ -1242,77 +1242,82 @@ export default function App() {
                 >
                   <span>{source.icon}</span>
                   <span>{source.name}</span>
+                  {source.id !== 'all' && realTrendingData[source.id] && (
+                    <span className="text-2xs opacity-60">({realTrendingData[source.id].length})</span>
+                  )}
                 </button>
               ))}
             </div>
 
             {/* 热榜列表 */}
-            <div className="card-surface rounded-2xl overflow-hidden">
-              {getCurrentTrending().map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedNews(item)}
-                  className="w-full px-4 py-3 text-left hover:bg-white/5 transition-colors flex items-center gap-3 border-b border-white/5 last:border-b-0"
-                >
-                  {/* 排名 */}
-                  <span className={`text-lg font-bold min-w-[28px] text-center ${
-                    idx === 0 ? 'text-red-500' : 
-                    idx === 1 ? 'text-orange-500' : 
-                    idx === 2 ? 'text-yellow-500' :
-                    'text-slate-600'
-                  }`}>
-                    {activeSource === 'all' ? (idx + 1) : item.rank}
-                  </span>
+            {getCurrentTrending().length > 0 ? (
+              <div className="card-surface rounded-2xl overflow-hidden">
+                {getCurrentTrending().map((item, idx) => (
+                  <a
+                    key={idx}
+                    href={item.link || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full px-4 py-3 text-left hover:bg-white/5 transition-colors flex items-center gap-3 border-b border-white/5 last:border-b-0 block"
+                  >
+                    {/* 排名 */}
+                    <span className={`text-lg font-bold min-w-[28px] text-center ${
+                      idx === 0 ? 'text-red-500' : 
+                      idx === 1 ? 'text-orange-500' : 
+                      idx === 2 ? 'text-yellow-500' :
+                      'text-slate-600'
+                    }`}>
+                      {activeSource === 'all' ? (idx + 1) : item.rank}
+                    </span>
 
-                  {/* 内容区 */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-200 truncate">
+                    {/* 内容区 */}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-slate-200 hover:text-amber-400 line-clamp-1 transition-colors">
                         {item.title}
                       </span>
-                      {item.isNew && (
-                        <span className="text-2xs px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded font-medium">新</span>
-                      )}
-                      {item.isHot && (
-                        <span className="text-2xs px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded font-medium">热</span>
+                      {item.source && (
+                        <span className="text-2xs text-slate-600 mt-0.5 block">{item.source}</span>
                       )}
                     </div>
+
+                    {/* 全部模式显示来源 */}
+                    {activeSource === 'all' && item.sourceIcon && (
+                      <span 
+                        className="text-2xs px-2 py-0.5 rounded-full font-medium shrink-0"
+                        style={{ 
+                          background: `${item.sourceColor}15`,
+                          color: item.sourceColor 
+                        }}
+                      >
+                        {item.sourceIcon}
+                      </span>
+                    )}
+
+                    {/* 发布时间 */}
+                    {item.pubDate && (
+                      <span className="text-2xs text-slate-600 shrink-0">
+                        {new Date(item.pubDate).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="card-surface rounded-2xl p-12 text-center">
+                {trendingLoading ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <RefreshCw size={24} className="animate-spin text-amber-400" />
+                    <p className="text-slate-400 text-sm">正在获取热榜数据...</p>
                   </div>
-
-                  {/* 全部模式显示来源 */}
-                  {activeSource === 'all' && item.sourceIcon && (
-                    <span 
-                      className="text-2xs px-2 py-0.5 rounded-full font-medium shrink-0"
-                      style={{ 
-                        background: `${item.sourceColor}15`,
-                        color: item.sourceColor 
-                      }}
-                    >
-                      {item.sourceIcon} {item.sourceName}
-                    </span>
-                  )}
-
-                  {/* 板块标签 */}
-                  <span className={`text-2xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                    item.tag === '科技' ? 'bg-blue-500/15 text-blue-400' :
-                    item.tag === '财经' ? 'bg-green-500/15 text-green-400' :
-                    item.tag === '汽车' ? 'bg-red-500/15 text-red-400' :
-                    item.tag === '国际' ? 'bg-purple-500/15 text-purple-400' :
-                    item.tag === '娱乐' ? 'bg-pink-500/15 text-pink-400' :
-                    item.tag === '体育' ? 'bg-cyan-500/15 text-cyan-400' :
-                    item.tag === '教育' ? 'bg-yellow-500/15 text-yellow-400' :
-                    'bg-slate-500/15 text-slate-400'
-                  }`}>
-                    {item.tag}
-                  </span>
-
-                  {/* 热度 */}
-                  <span className="text-2xs text-slate-500 shrink-0 w-14 text-right">
-                    {item.hot}
-                  </span>
-                </button>
-              ))}
-            </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3">
+                    <TrendingUp size={24} className="text-slate-600" />
+                    <p className="text-slate-400 text-sm">暂无热榜数据</p>
+                    <p className="text-slate-600 text-2xs">请稍后刷新重试</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
