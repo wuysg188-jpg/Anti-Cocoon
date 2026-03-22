@@ -641,36 +641,36 @@ const TRENDING_CACHE_KEY = 'anti_cocoon_trending';
 const TRENDING_CACHE_MAX_AGE = 30 * 60 * 1000; // 30分钟缓存
 
 /**
- * 各搜索引擎热榜配置
+ * 各分类热榜配置（预设热门话题）
  */
-const SEARCH_ENGINE_FEEDS = [
+const TRENDING_CATEGORIES = [
   {
-    id: 'google_zh',
-    name: 'Google 热榜 (中文)',
-    icon: '🔍',
-    color: '#4285F4',
-    url: 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtVnVHZ0pWVXlnQVAB?hl=zh-CN&gl=CN&ceid=CN:zh-Hans',
-  },
-  {
-    id: 'google_en',
-    name: 'Google Top Stories',
-    icon: '🌐',
-    color: '#34A853',
-    url: 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en',
-  },
-  {
-    id: 'google_tech',
-    name: 'Google 科技',
+    id: 'tech',
+    name: '科技热榜',
     icon: '💻',
-    color: '#EA4335',
-    url: 'https://news.google.com/rss/topics/CAAqKAgKIiJDQkFTRXdvSkwyMHZNR1ptZHpWbUVnVnZhQzFVVnhvQ1ZGY29BQVAB?hl=zh-CN&gl=CN&ceid=CN:zh-Hans',
+    color: '#4285F4',
+    keywords: ['AI', 'ChatGPT', '芯片', '半导体', '人工智能'],
   },
   {
-    id: 'google_business',
-    name: 'Google 财经',
+    id: 'finance',
+    name: '财经热榜',
     icon: '💰',
+    color: '#34A853',
+    keywords: ['A股', '港股', '美股', '比特币', '央行'],
+  },
+  {
+    id: 'auto',
+    name: '汽车热榜',
+    icon: '🚗',
+    color: '#EA4335',
+    keywords: ['特斯拉', '比亚迪', '新能源汽车', '自动驾驶', '小米汽车'],
+  },
+  {
+    id: 'global',
+    name: '国际热榜',
+    icon: '🌍',
     color: '#FBBC05',
-    url: 'https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtVnVHZ0pWVXlnQVAB?hl=zh-CN&gl=CN&ceid=CN:zh-Hans',
+    keywords: ['美国', '日本', '欧洲', '中东', '俄乌'],
   },
 ];
 
@@ -749,8 +749,8 @@ async function fetchSingleFeed(rssUrl, sourceName) {
 }
 
 /**
- * 获取各搜索引擎热榜
- * @returns {Promise<Array>} 各搜索引擎的热榜数据
+ * 获取各分类热榜
+ * @returns {Promise<Array>} 各分类的热榜数据
  */
 export async function fetchTrendingNews() {
   // 检查缓存
@@ -759,18 +759,72 @@ export async function fetchTrendingNews() {
     return cached;
   }
 
-  // 并行获取所有搜索引擎的热榜
-  const promises = SEARCH_ENGINE_FEEDS.map(async (feed) => {
-    const news = await fetchSingleFeed(feed.url, feed.name);
-    return {
-      ...feed,
-      news,
-    };
+  // 为每个分类获取新闻
+  const promises = TRENDING_CATEGORIES.map(async (category) => {
+    // 随机选择一个关键词
+    const keyword = category.keywords[Math.floor(Math.random() * category.keywords.length)];
+    
+    const TIMEOUT_MS = 5000;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+      
+      const proxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(
+        `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans`
+      )}`;
+      
+      const response = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: { 'Accept': '*/*' },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        return {
+          ...category,
+          news: [],
+          keyword,
+        };
+      }
+      
+      const text = await response.text();
+      if (!text) {
+        return {
+          ...category,
+          news: [],
+          keyword,
+        };
+      }
+      
+      let xmlText = text;
+      if (text.trimStart().startsWith('{')) {
+        try {
+          const json = JSON.parse(text);
+          xmlText = json.contents || json.data || text;
+        } catch {}
+      }
+      
+      const items = parseRssXml(xmlText, keyword);
+      return {
+        ...category,
+        news: items.slice(0, 10),
+        keyword,
+      };
+    } catch (err) {
+      console.warn(`获取 ${category.name} 失败:`, err);
+      return {
+        ...category,
+        news: [],
+        keyword,
+      };
+    }
   });
 
   const results = await Promise.all(promises);
   
-  // 过滤掉没有新闻的源
+  // 过滤掉没有新闻的分类
   const validResults = results.filter(r => r.news && r.news.length > 0);
   
   // 缓存结果
