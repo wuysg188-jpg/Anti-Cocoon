@@ -26,6 +26,8 @@ const CORS_PROXIES = [
  * 优先级 3: 备用源
  */
 const NEWS_SOURCES = {
+  // ═══════════════ 国际源 ═══════════════
+  
   // Google News - 中文简体
   google_zh: {
     name: 'Google 中文',
@@ -68,6 +70,103 @@ const NEWS_SOURCES = {
     rss: 'https://news.search.yahoo.com/rss?p={KEYWORD}',
     priority: 2,
   },
+  
+  // ═══════════════ 国内源 ═══════════════
+  
+  // 百度新闻 (通过 RSSHub)
+  baidu: {
+    name: '百度新闻',
+    icon: '🔵',
+    rss: 'https://rsshub.app/baidu/news/{KEYWORD}',
+    priority: 1,
+  },
+  // 搜狗新闻 (通过 RSSHub)
+  sogou: {
+    name: '搜狗新闻',
+    icon: '🟠',
+    rss: 'https://rsshub.app/sogou/news/{KEYWORD}',
+    priority: 1,
+  },
+  // 今日头条 (通过 RSSHub)
+  toutiao: {
+    name: '今日头条',
+    icon: '🔴',
+    rss: 'https://rsshub.app/toutiao/search/{KEYWORD}',
+    priority: 1,
+  },
+  // 网易新闻 (通过 RSSHub)
+  netease: {
+    name: '网易新闻',
+    icon: '🔴',
+    rss: 'https://rsshub.app/netease/news/rank/{KEYWORD}',
+    priority: 2,
+  },
+  // 新浪新闻 (通过 RSSHub)
+  sina: {
+    name: '新浪新闻',
+    icon: '🟡',
+    rss: 'https://rsshub.app/sina/news/{KEYWORD}',
+    priority: 2,
+  },
+  // 凤凰新闻 (通过 RSSHub)
+  ifeng: {
+    name: '凤凰新闻',
+    icon: '🔴',
+    rss: 'https://rsshub.app/ifeng/news/{KEYWORD}',
+    priority: 2,
+  },
+  // 澎湃新闻
+  thepaper: {
+    name: '澎湃新闻',
+    icon: '🟣',
+    rss: 'https://rsshub.app/thepaper/channel/{KEYWORD}',
+    priority: 2,
+  },
+  // 观察者网
+  guancha: {
+    name: '观察者网',
+    icon: '👁️',
+    rss: 'https://rsshub.app/guancha/headline/{KEYWORD}',
+    priority: 2,
+  },
+  // 36氪
+  kr36: {
+    name: '36氪',
+    icon: '📰',
+    rss: 'https://rsshub.app/36kr/search/news/{KEYWORD}',
+    priority: 2,
+  },
+  // 少数派
+  sspai: {
+    name: '少数派',
+    icon: '🅰️',
+    rss: 'https://rsshub.app/sspai/search/{KEYWORD}',
+    priority: 3,
+  },
+  // IT之家
+  ithome: {
+    name: 'IT之家',
+    icon: '💻',
+    rss: 'https://rsshub.app/ithome/tag/{KEYWORD}',
+    priority: 2,
+  },
+  // 知乎热榜
+  zhihu: {
+    name: '知乎',
+    icon: '🔵',
+    rss: 'https://rsshub.app/zhihu/search/{KEYWORD}',
+    priority: 2,
+  },
+  // 微博热搜 (通过 RSSHub)
+  weibo: {
+    name: '微博',
+    icon: '🔥',
+    rss: 'https://rsshub.app/weibo/search/hot/{KEYWORD}',
+    priority: 2,
+  },
+  
+  // ═══════════════ 备用源 ═══════════════
+  
   // DuckDuckGo News (通过 Bing)
   duckduckgo: {
     name: 'DuckDuckGo',
