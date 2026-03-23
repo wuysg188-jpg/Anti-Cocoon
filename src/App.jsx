@@ -961,6 +961,28 @@ export default function App() {
               {loading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
               <span className="hidden sm:inline">搜索</span>
             </button>
+
+            {/* 快捷入口 */}
+            <div className="hidden lg:flex items-center gap-1 ml-2">
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost p-2 rounded-lg"
+                title="GitHub"
+              >
+                <Github size={16} />
+              </a>
+              <a
+                href="https://huggingface.co"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost p-2 rounded-lg"
+                title="HuggingFace"
+              >
+                <BrainCircuit size={16} />
+              </a>
+            </div>
           </div>
 
           {/* 右侧工具 */}
