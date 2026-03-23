@@ -4,7 +4,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Anti-Cocoon AI — 跨界信息破壁机。突破信息茧房，以AI深度分析全球资讯，多模型交叉审查，洞见真相。" />
+    <meta name="description" content="Anti-Cocoon AI — 打破信息茧房的AI新闻聚合平台" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AntiCocoon" />
+    <link rel="manifest" href="/Anti-Cocoon/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <title>Anti-Cocoon AI · 跨界情报看板</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,15 +22,17 @@
           if (theme === 'dark') document.documentElement.classList.add('dark');
         } catch (e) {}
       })();
+
+      // PWA Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
     </script>
     <style>
-      /* 立即隐藏 Google Translate 所有注入元素 */
-      .goog-te-banner-frame,
-      .goog-te-balloon-frame,
-      iframe[name="goog-te-banner-frame"],
-      iframe.skiptranslate,
-      [class*="VIpgJd"],
-      [class*="goog-te"] {
+      .goog-te-banner-frame, .goog-te-balloon-frame, iframe[name="goog-te-banner-frame"],
+      iframe.skiptranslate, [class*="VIpgJd"], [class*="goog-te"] {
         display: none !important;
         visibility: hidden !important;
         height: 0 !important;
@@ -32,8 +40,8 @@
       }
       body { top: 0 !important; position: static !important; margin-top: 0 !important; }
     </style>
-    <script type="module" crossorigin src="/Anti-Cocoon/assets/index-B7jh_5Wr.js"></script>
-    <link rel="stylesheet" crossorigin href="/Anti-Cocoon/assets/index-CWYBAVhi.css">
+    <script type="module" crossorigin src="/Anti-Cocoon/assets/index-Ot1BRu8G.js"></script>
+    <link rel="stylesheet" crossorigin href="/Anti-Cocoon/assets/index-DJtz_nlB.css">
   </head>
   <body class="antialiased">
     <div id="root"></div>
