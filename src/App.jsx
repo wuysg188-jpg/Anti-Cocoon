@@ -659,32 +659,6 @@ function InsightModal({ mode, newsItem, modelConfigs, onClose }) {
   );
 }
 
-// ─── 统计热图 Bar ─────────────────────────────────────────────────────────────
-
-function CategoryHeatBar({ groups, total }) {
-  if (total === 0) return null;
-  return (
-    <div className="flex h-1.5 w-full rounded-full overflow-hidden gap-px">
-      {CATEGORIES.map((cat, i) => {
-        const count = (groups[cat.id] || []).length;
-        if (!count) return null;
-        const pct = (count / total) * 100;
-        const hues = [
-          '#fbbf24','#6366f1','#10b981','#f472b6','#38bdf8',
-          '#fb923c','#a78bfa','#34d399','#f87171','#818cf8',
-        ];
-        return (
-          <div
-            key={cat.id}
-            style={{ width: `${pct}%`, background: hues[i] }}
-            title={`${cat.label}: ${count}`}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── 主应用 ──────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -1069,12 +1043,6 @@ export default function App() {
                 );
               })}
             </div>
-            {/* 热力分布条 */}
-            {newsItems.length > 0 && (
-              <div className="pb-2">
-                <CategoryHeatBar groups={grouped} total={newsItems.length} />
-              </div>
-            )}
           </div>
         </nav>
       )}
