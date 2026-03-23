@@ -7,6 +7,36 @@
 
 ## [未发布]
 
+## [0.4.0] - 2026-03-22
+### 架构升级
+- **Cloudflare Worker 代理服务** - 解决 CORS 代理不稳定问题
+  - `server/worker.js` - 轻量级 RSS 代理（<100行）
+  - 支持 RSS 解析、搜索聚合、内置缓存
+  - 免费额度：10万请求/天
+  - 部署简单：`wrangler deploy`
+
+- **AI 语义分类** - 替代正则匹配分类
+  - `src/utils/aiClassifier.js`
+  - 支持 GPT-4o-mini / Claude 3 Haiku 等轻量模型
+  - Zero-shot 分类，准确率大幅提升
+  - 回退机制：无 AI 配置时使用关键词分类
+
+- **IndexedDB 存储** - 替代 LocalStorage
+  - `src/utils/storage.js`
+  - 支持近乎无限的本地存储空间
+  - 兼容 LocalStorage API
+  - 支持存储大小估算
+
+### 新增
+- 健康检查端点 `/health`
+- 搜索聚合端点 `/api/search`
+- 存储大小监控功能
+
+### 改进
+- 更稳定的新闻获取
+- 更准确的新闻分类
+- 更可靠的本地缓存
+
 ## [0.3.0] - 2026-03-22
 ### 重大重构
 - **代码架构优化** - 创建统一的配置文件、工具函数和代理服务

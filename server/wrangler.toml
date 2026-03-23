@@ -1,0 +1,8 @@
+name = "anti-cocoon-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# 如果需要使用 KV 缓存，取消下面的注释
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "your-kv-namespace-id"
