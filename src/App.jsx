@@ -1054,7 +1054,7 @@ export default function App() {
         {/* ── 首页：热榜 ── */}
         {!loading && newsItems.length === 0 && !searchError && (
           <div className="max-w-2xl mx-auto">
-            <TrendingBoard onSearch={(keyword) => handleSearch(keyword)} />
+            <TrendingBoard />
           </div>
         )}
 
