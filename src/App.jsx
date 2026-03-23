@@ -199,63 +199,65 @@ function NewsCard({ item, index = 0, onSingle, onMulti, bookmarked, onToggleBook
   const catDef = CATEGORIES.find((c) => c.id === item.categoryId);
 
   return (
-    <article className={`card-surface rounded-2xl p-4 flex flex-col gap-3 group stagger-enter stagger-delay-${(index % 12) + 1}`}>
+    <article className="card-interactive p-4 flex flex-col gap-3 animate-fade-in">
       {/* 元信息行 */}
-      <div className="flex items-center justify-between text-2xs text-slate-500">
+      <div className="flex items-center justify-between text-caption text-text-tertiary">
         <span className="flex items-center gap-1.5 min-w-0">
-          <Globe size={10} className="shrink-0 text-slate-600" />
-          <span className="truncate max-w-[110px]">{item.sourceName || item.author || '—'}</span>
+          <Globe size={12} className="shrink-0" />
+          <span className="truncate max-w-[120px]">{item.sourceName || item.author || '—'}</span>
         </span>
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
-            <Clock size={10} />
+            <Clock size={12} />
             {formatDate(item.pubDate)}
           </span>
           {/* 书签按钮 */}
           <button
             onClick={() => onToggleBookmark(item)}
-            className={`transition-colors ${bookmarked ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'}`}
+            className={`p-1 rounded transition-colors ${
+              bookmarked ? 'text-accent' : 'text-text-tertiary hover:text-text-secondary'
+            }`}
             title={bookmarked ? '移出阅读清单' : '加入阅读清单'}
           >
-            <BookMarked size={11} />
+            <BookMarked size={14} />
           </button>
         </div>
       </div>
 
       {/* 分类标签 */}
       {catDef && (
-        <span className="cat-chip self-start">
+        <span className="tag self-start">
           {catDef.icon} {catDef.label}
         </span>
       )}
 
       {/* 标题 */}
-      <h3 className="text-sm font-semibold leading-snug text-slate-100 line-clamp-3 group-hover:text-amber-100 transition-colors flex-1">
+      <h3 className="text-subheading text-text-primary line-clamp-3 flex-1">
         {item.title}
       </h3>
 
       {/* 摘要 */}
       {item.description && (
-        <p className="text-2xs text-slate-500 leading-relaxed line-clamp-3">
+        <p className="text-body text-text-secondary line-clamp-2">
           {item.description}
         </p>
       )}
 
       {/* 操作 */}
-      <div className="flex gap-2 pt-1">
+      <div className="flex gap-2 pt-2">
         <button
           onClick={() => onSingle(item)}
-          className="btn-amber flex-1 flex items-center justify-center gap-1.5 text-2xs font-semibold rounded-lg px-2 py-2"
+          className="btn-secondary flex-1 flex items-center justify-center gap-2 py-2 text-sm"
         >
-          <BrainCircuit size={11} />
+          <BrainCircuit size={14} />
           深度解读
         </button>
         <button
           onClick={() => onMulti(item)}
-          className="btn-fire flex-1 flex items-center justify-center gap-1.5 text-2xs font-semibold rounded-lg px-2 py-2"
+          className="btn-primary flex-1 flex items-center justify-center gap-2 py-2 text-sm"
         >
-          <Sparkles size={11} />
-          🔥 三方审查
+          <Sparkles size={14} />
+          多维分析
         </button>
       </div>
 
@@ -264,10 +266,10 @@ function NewsCard({ item, index = 0, onSingle, onMulti, bookmarked, onToggleBook
         href={item.link}
         target="_blank"
         rel="noopener noreferrer"
-        className="self-end text-2xs text-slate-600 hover:text-amber-500 transition-colors flex items-center gap-1"
+        className="self-end text-caption text-text-tertiary hover:text-accent transition-colors flex items-center gap-1"
       >
-        <ExternalLink size={9} />
-        原文
+        <ExternalLink size={12} />
+        查看原文
       </a>
     </article>
   );
@@ -1101,9 +1103,9 @@ export default function App() {
             <button
               onClick={() => handleSearch()}
               disabled={loading || !inputValue.trim()}
-              className="btn-amber shrink-0 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="btn-primary shrink-0 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? <RefreshCw size={12} className="animate-spin" /> : <Search size={12} />}
+              {loading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
               <span className="hidden sm:inline">搜索</span>
             </button>
           </div>
@@ -1113,10 +1115,10 @@ export default function App() {
             {/* Theme Toggle */}
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="btn-ghost w-8 h-8 rounded-lg flex items-center justify-center transition-all"
-              title={theme === 'dark' ? '切换为白昼模式' : '切换为黑夜模式'}
+              className="btn-ghost w-9 h-9 rounded-lg flex items-center justify-center"
+              title={theme === 'dark' ? '切换为亮色模式' : '切换为暗色模式'}
             >
-              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} className="text-slate-600" />}
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
 
             {/* Translate */}
@@ -1127,26 +1129,26 @@ export default function App() {
             {/* 书签 */}
             <button
               onClick={() => setShowBookmarks((v) => !v)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all ${
                 showBookmarks
-                  ? 'bg-amber-400/12 border-amber-400/30 text-amber-400'
+                  ? 'tag-accent'
                   : 'btn-ghost'
               }`}
               title="阅读清单"
             >
-              <BookMarked size={13} />
+              <BookMarked size={14} />
               {bookmarks.length > 0 && (
-                <span className="font-mono text-2xs">{bookmarks.length}</span>
+                <span className="font-mono text-xs">{bookmarks.length}</span>
               )}
             </button>
 
             {/* API 配置 */}
             <button
               onClick={() => setShowApiModal(true)}
-              className="btn-ghost flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border"
+              className="btn-ghost flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm"
             >
               <span
-                className={`w-1.5 h-1.5 rounded-full ${
+                className={`w-2 h-2 rounded-full ${
                   configuredCount > 0 ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse-amber'
                 }`}
               />
