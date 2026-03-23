@@ -6,165 +6,206 @@
 [![许可证](https://img.shields.io/github/license/wuysg188-jpg/Anti-Cocoon?style=flat-square&color=green)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/wuysg188-jpg/Anti-Cocoon?style=flat-square&color=yellow)](https://github.com/wuysg188-jpg/Anti-Cocoon/stargazers)
 [![Forks](https://img.shields.io/github/forks/wuysg188-jpg/Anti-Cocoon?style=flat-square&color=orange)](https://github.com/wuysg188-jpg/Anti-Cocoon/network/members)
-[![Issues](https://img.shields.io/github/issues/wuysg188-jpg/Anti-Cocoon?style=flat-square&color=red)](https://github.com/wuysg188-jpg/Anti-Cocoon/issues)
 
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-部署成功-222222?style=flat-square&logo=github&logoColor=white)](https://wuysg188-jpg.github.io/Anti-Cocoon/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
+[![PWA](https://img.shields.io/badge/PWA-支持离线-5A0FC8?style=flat-square)](https://web.dev/pwa/)
 
-[🌐 在线预览](https://wuysg188-jpg.github.io/Anti-Cocoon/) | [📖 文档](#) | [🐛 提交Issue](https://github.com/wuysg188-jpg/Anti-Cocoon/issues)
+[🌐 在线预览](https://wuysg188-jpg.github.io/Anti-Cocoon/) | [📖 文档](#-项目架构) | [🐛 提交Issue](https://github.com/wuysg188-jpg/Anti-Cocoon/issues)
 
 </div>
 
-一个旨在**打破信息茧房**的AI驱动型新闻聚合与分析平台。以情报终端的视角，聚合全球资讯，通过多AI模型交叉审查，洞见事件底层逻辑。
+> **打破信息茧房，拥抱多元视角** 🌍
 
-## 📖 项目简介
+一个基于 AI 的新闻聚合与分析平台。支持自定义订阅源、本地 RAG 问答、多模型交叉审查，完全掌控你的信息流。
 
-Anti-Cocoon AI 是一个基于React + Tailwind CSS + Vite构建的现代化前端应用。它集成了新闻聚合、AI深度分析、智能分类等功能，专注于解决信息茧房问题，提供多维度、跨视角的新闻解读。
+## ✨ 核心特性
 
-## ✨ 主要功能
+### 📰 信息聚合
+- **OPML 订阅源** - 导入/导出 RSS，完全掌控数据源
+- **多源聚合** - Google News、GitHub、HuggingFace
+- **股票搜索** - 支持 A股/港股/美股 代码搜索
 
-- **📈 股票代码搜索**：输入股票代码即可查看个股相关新闻
-  - 支持A股（如：600519贵州茅台、000858五粮液）
-  - 支持港股（如：0700腾讯、9988阿里巴巴）
-  - 支持美股（如：AAPL苹果、TSLA特斯拉）
-  - 内置200+热门股票代码映射
-- **📰 多新闻源聚合**：Google News、Bing News、Yahoo News
-- **🤖 AI深度分析**：单模型深度解读与多模型交叉审查
-- **🏷️ 智能分类**：10个预设类别，关键词正则匹配快速归档
-- **📋 阅读清单**：收藏新闻条目，方便后续查阅
-- **🌐 多语言翻译**：集成Google Translate，支持页面级翻译
-- **🔐 BYOK模式**：自带API密钥，隐私安全有保障
-- **💾 本地缓存**：分析结果本地存储，避免重复消耗
-- **🎨 响应式设计**：支持桌面端/移动端，深色/浅色主题
+### 🤖 AI 分析
+- **深度解读** - 单模型深度分析新闻
+- **交叉审查** - 多模型并发验证可靠性
+- **本地 RAG** - 基于存储新闻的智能问答
+
+### 🔧 工程优化
+- **自建 Worker** - Cloudflare Workers 解决 CORS
+- **边缘解析** - XML→JSON 在边缘节点完成
+- **PWA 支持** - 可安装、离线缓存
+
+### 🔐 隐私安全
+- **BYOK 模式** - 自带 API 密钥
+- **本地存储** - IndexedDB，数据不离端
+- **零追踪** - 不收集任何用户数据
+
+## 🏗️ 项目架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Anti-Cocoon v0.5.0                      │
+├─────────────────────────────────────────────────────────────┤
+│  前端 (GitHub Pages)                                         │
+│  ├── React 18 + Vite 5 + Tailwind CSS                       │
+│  ├── OPML 订阅源管理                                         │
+│  ├── 本地 RAG 问答                                           │
+│  └── PWA 离线支持                                            │
+├─────────────────────────────────────────────────────────────┤
+│  Worker (Cloudflare)                                         │
+│  ├── RSS 代理                                                │
+│  ├── XML → JSON 解析                                         │
+│  └── 搜索聚合                                                │
+├─────────────────────────────────────────────────────────────┤
+│  存储 (IndexedDB)                                            │
+│  ├── 新闻缓存                                                │
+│  ├── AI 分析结果                                             │
+│  └── 订阅源配置                                              │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## 🛠️ 技术栈
 
-| 类别 | 技术 |
-|:---|:---|
-| 前端框架 | React 18 |
-| 构建工具 | Vite 5 |
-| 样式方案 | Tailwind CSS 3 |
-| Markdown渲染 | react-markdown + remark-gfm |
-| 图标库 | lucide-react |
-| 数据源 | Google News RSS |
-| 数据存储 | LocalStorage |
+| 类别 | 技术 | 用途 |
+|:---|:---|:---|
+| 前端框架 | React 18 | UI 组件化 |
+| 构建工具 | Vite 5 | 快速构建 |
+| 样式方案 | Tailwind CSS 3 | 原子化样式 |
+| 后端代理 | Cloudflare Workers | CORS 解决 + XML 解析 |
+| 本地存储 | IndexedDB | 大容量缓存 |
+| AI 接口 | OpenAI 兼容 API | 深度分析 |
+| PWA | Service Worker | 离线支持 |
 
 ## 🚀 快速开始
 
-### 环境要求
+### 方式一：直接使用（推荐）
 
-- Node.js 16+
-- npm 或 yarn
+访问在线版本：https://wuysg188-jpg.github.io/Anti-Cocoon/
 
-### 安装步骤
+### 方式二：本地开发
 
-1. **克隆项目**
-   ```bash
-   git clone https://github.com/wuysg188-jpg/Anti-Cocoon.git
-   cd Anti-Cocoon
-   ```
+```bash
+# 克隆项目
+git clone https://github.com/wuysg188-jpg/Anti-Cocoon.git
+cd Anti-Cocoon
 
-2. **安装依赖**
-   ```bash
-   npm install
-   ```
+# 安装依赖
+npm install
 
-3. **启动开发服务器**
-   ```bash
-   npm run dev
-   ```
-   应用将运行在 `http://localhost:5173`
+# 启动开发服务器
+npm run dev
 
-4. **构建生产版本**
-   ```bash
-   npm run build
-   ```
+# 构建生产版本
+npm run build
+```
+
+### 方式三：部署 Worker（可选）
+
+```bash
+# 安装 Wrangler
+npm install -g wrangler
+
+# 登录 Cloudflare
+wrangler login
+
+# 部署 Worker
+cd server
+wrangler deploy
+```
 
 ## ⚙️ 配置说明
 
-### AI模型配置（BYOK模式）
+### AI 模型配置（BYOK）
 
-项目采用BYOK（Bring Your Own Key）模式，需要用户自行配置AI模型：
+1. 点击右上角 ⚙️ 设置图标
+2. 添加 AI 模型：
+   - **API Key**: 你的 API 密钥
+   - **Base URL**: API 端点（如 `https://api.openai.com/v1`）
+   - **Model ID**: 模型名称（如 `gpt-4o-mini`）
+3. 支持任何 OpenAI 兼容 API
 
-1. 打开应用后，点击右上角设置图标
-2. 添加AI模型配置：
-   - **API Key**：从AI服务商获取
-   - **Base URL**：API端点地址
-   - **Model ID**：模型标识符
-3. 支持兼容OpenAI API格式的服务商（OpenAI、DeepSeek、Claude、通义千问等）
+### OPML 订阅源
 
-### 新闻分类
-
-项目内置10个预设分类：
-- 半导体、人工智能、生物科技、新能源、航天
-- 地缘政治、经济、加密货币、健康、娱乐
+1. 点击顶部 📡 图标
+2. **导入**: 从 Feedly/Inoreader 导出 OPML 文件
+3. **导出**: 备份你的订阅源
+4. **添加**: 手动添加 RSS/Atom 源
 
 ## 📁 项目结构
 
 ```
-Anti-Cocoon-AI-Web/
-├── index.html            # 入口HTML
-├── package.json          # 项目配置
-├── vite.config.js        # Vite配置
-├── tailwind.config.js    # Tailwind配置
-├── postcss.config.js     # PostCSS配置
-├── CHANGELOG.md          # 更新日志
-├── .gitignore            # Git忽略文件
-└── src/
-    ├── main.jsx          # 应用入口
-    ├── App.jsx           # 根组件
-    ├── index.css         # 全局样式
-    ├── components/
-    │   └── TranslateWidget.jsx  # 翻译组件
-    └── utils/
-        ├── aiService.js  # AI服务核心
-        └── classifier.js # 新闻分类器
+Anti-Cocoon/
+├── src/
+│   ├── components/
+│   │   ├── TrendingBoard.jsx    # 热榜组件
+│   │   ├── OPMLManager.jsx      # 订阅源管理
+│   │   ├── LocalRAG.jsx         # 本地 RAG 问答
+│   │   └── TranslateWidget.jsx  # 翻译组件
+│   ├── utils/
+│   │   ├── aiService.js         # AI 服务
+│   │   ├── opml.js              # OPML 解析
+│   │   ├── storage.js           # IndexedDB 存储
+│   │   └── classifier.js        # 新闻分类
+│   ├── config/
+│   │   └── index.js             # 配置文件
+│   └── App.jsx                  # 主应用
+├── server/
+│   ├── worker.js                # Cloudflare Worker
+│   └── wrangler.toml            # 部署配置
+├── public/
+│   ├── manifest.json            # PWA 配置
+│   └── sw.js                    # Service Worker
+└── package.json
 ```
 
-## 🔧 特殊功能
+## 📊 版本历史
 
-### 多模型交叉审查
+| 版本 | 日期 | 主要更新 |
+|:---|:---|:---|
+| v0.5.0 | 2026-03-22 | OPML、PWA、Worker XML解析、本地RAG |
+| v0.4.0 | 2026-03-22 | Worker代理、AI分类、IndexedDB |
+| v0.3.0 | 2026-03-22 | 架构重构、统一配置 |
+| v0.2.0 | 2026-03-22 | 股票代码搜索 |
+| v0.1.0 | 2026-03-22 | 初始版本 |
 
-- 支持配置多个AI模型进行"三方审查"
-- 使用`Promise.allSettled`并发执行，单个模型失败不影响其他结果
-- 自动对比不同模型的分析结果，验证信息可靠性
+完整日志：[CHANGELOG.md](CHANGELOG.md)
 
-### CORS代理瀑布流
+## 🤝 贡献
 
-- 配置多个公共CORS代理
-- 自动尝试，提高Google News RSS获取成功率
+欢迎提交 Issue 和 Pull Request！
 
-### 隐私安全
+```bash
+# Fork 项目
+# 创建功能分支
+git checkout -b feature/AmazingFeature
 
-- 所有敏感信息（API密钥、分析缓存）仅存储在浏览器LocalStorage
-- 不经过任何后端服务器中转
+# 提交更改
+git commit -m 'Add AmazingFeature'
 
-## 📝 更新日志
+# 推送分支
+git push origin feature/AmazingFeature
 
-查看 [CHANGELOG.md](CHANGELOG.md) 了解版本更新历史。
-
-## 🤝 贡献指南
-
-欢迎提交Issue和Pull Request！
-
-1. Fork项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开Pull Request
+# 打开 Pull Request
+```
 
 ## 📄 许可证
 
-本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+MIT License - 详见 [LICENSE](LICENSE)
 
 ## 🙏 致谢
 
-- 感谢所有提供CORS代理的公共服务
-- 感谢Tailwind CSS团队提供的优秀工具
-- 感谢React社区的支持和贡献
+- [Cloudflare Workers](https://workers.cloudflare.com/) - 边缘计算平台
+- [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
+- [React](https://react.dev/) - UI 框架
+- [Lucide](https://lucide.dev/) - 图标库
 
 ---
 
-**打破信息茧房，拥抱多元视角** 🌍
+<div align="center">
+
+**如果这个项目对你有帮助，请给一个 ⭐ Star！**
+
+</div>
