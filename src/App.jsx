@@ -91,14 +91,6 @@ const MODEL_THEME_COLORS = [
 const STORAGE_KEY_MODELS = 'anti_cocoon_model_configs';
 const STORAGE_KEY_BOOKMARKS = 'anti_cocoon_bookmarks';
 
-// ─── 热门搜索词 ───────────────────────────────────────────────────────────────
-
-const TICKER_TOPICS = [
-  'Nvidia', 'TSMC', 'DeepSeek', 'SpaceX', 'CRISPR', 'BYD',
-  'Quantum Computing', 'Nuclear Fusion', '供应链', 'OpenAI',
-  '新能源', '半导体', 'Robotics', 'GLP-1', 'Bitcoin ETF', 'ASML',
-];
-
 // ─── 工具函数 ─────────────────────────────────────────────────────────────────
 
 function loadModelConfigs() {
@@ -1045,30 +1037,6 @@ export default function App() {
             </button>
           </div>
         </div>
-
-        {/* 跑马灯条（仅无搜索结果时展示热门词） */}
-        {newsItems.length === 0 && !loading && (
-          <div className="border-t border-white/4 overflow-hidden h-7 flex items-center">
-            <span className="text-2xs text-slate-600 shrink-0 px-3 flex items-center gap-1.5 border-r border-white/6">
-              <Zap size={10} className="text-amber-500" />
-              热门
-            </span>
-            <div className="overflow-hidden flex-1">
-              <div className="marquee-track">
-                {[...TICKER_TOPICS, ...TICKER_TOPICS].map((t, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { setInputValue(t); handleSearch(t); }}
-                    className="shrink-0 text-2xs text-slate-500 hover:text-amber-400 px-3 py-0.5 transition-colors"
-                  >
-                    {t}
-                    <span className="text-slate-700 mx-2">·</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* ══════════════════════ 类别导航 ===================================== */}
