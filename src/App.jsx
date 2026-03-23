@@ -744,25 +744,39 @@ export default function App() {
 
   // 获取单个热榜源（尝试多个代理）
   const fetchWithProxy = async (url) => {
-    for (const proxy of CORS_PROXIES) {
+    // 并行尝试所有代理
+    const proxyPromises = CORS_PROXIES.map(async (proxy) => {
       try {
         const res = await fetch(proxy + encodeURIComponent(url), { 
-          signal: AbortSignal.timeout(6000) 
+          signal: AbortSignal.timeout(8000) 
         });
         if (res.ok) {
           const text = await res.text();
-          if (text && text.length > 100) {
-            const items = parseRssXml(text, '');
+          if (text && text.length > 50) {
+            // 处理 JSON 包装
+            let xmlText = text;
+            if (text.trimStart().startsWith('{')) {
+              try {
+                const json = JSON.parse(text);
+                xmlText = json.contents || json.data || text;
+              } catch {}
+            }
+            const items = parseRssXml(xmlText, '');
             if (items.length > 0) {
               return items;
             }
           }
         }
       } catch (e) {
-        continue;
+        // 忽略单个代理失败
       }
-    }
-    return [];
+      return [];
+    });
+
+    // 返回第一个成功的代理结果
+    const results = await Promise.allSettled(proxyPromises);
+    const success = results.find(r => r.status === 'fulfilled' && r.value.length > 0);
+    return success ? success.value : [];
   };
 
   // 获取热榜数据
@@ -774,18 +788,23 @@ export default function App() {
       // 并行获取所有热榜源
       const promises = TRENDING_SOURCES.map(async (source) => {
         const items = await fetchWithProxy(source.url);
-        results[source.id] = items.slice(0, 20).map((item, idx) => ({
-          rank: idx + 1,
-          title: item.title,
-          link: item.link,
-          source: item.sourceName,
-          pubDate: item.pubDate,
-          hot: `${Math.floor((1000 - idx * 40) * (0.8 + Math.random() * 0.4))}万`,
-        }));
+        if (items.length > 0) {
+          results[source.id] = items.slice(0, 15).map((item, idx) => ({
+            rank: idx + 1,
+            title: item.title,
+            link: item.link,
+            source: item.sourceName,
+            pubDate: item.pubDate,
+            hot: `${Math.floor((1000 - idx * 50) * (0.9 + Math.random() * 0.2))}万`,
+          }));
+        }
       });
 
       await Promise.all(promises);
-      setRealTrendingData(results);
+      
+      if (Object.keys(results).length > 0) {
+        setRealTrendingData(results);
+      }
       setTrendingLoading(false);
     };
 
