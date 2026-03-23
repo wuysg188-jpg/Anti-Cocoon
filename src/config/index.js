@@ -2,9 +2,15 @@
  * config/index.js — 项目配置文件
  */
 
-// ─── CORS 代理配置 ──────────────────────────────────────────────────────
+// ─── API 配置 ────────────────────────────────────────────────────────────
+
+// 自建 Worker 代理（优先使用）
+export const WORKER_PROXY = 'https://anti-cocoon-proxy.3357654422.workers.dev';
+
+// ─── CORS 代理配置（备用）────────────────────────────────────────────────
 
 export const CORS_PROXIES = [
+  `${WORKER_PROXY}/rss?url=`,  // 自建 Worker 代理（最优先）
   'https://api.allorigins.win/raw?url=',
   'https://api.codetabs.com/v1/proxy?quest=',
   'https://corsproxy.io/?',
