@@ -19,6 +19,7 @@ import {
   Code, Github, Star, GitFork,
 } from 'lucide-react';
 import TranslateWidget from './components/TranslateWidget.jsx';
+import TrendingBoard from './components/TrendingBoard.jsx';
 import { CATEGORIES, classifyNewsItems, groupByCategory } from './utils/classifier.js';
 import {
   fetchLiveNews,
@@ -1050,15 +1051,10 @@ export default function App() {
       {/* ══════════════════════ 主内容 ======================================= */}
       <main className="max-w-screen-2xl mx-auto px-4 py-6">
 
-        {/* ── 首页：简单欢迎 ── */}
+        {/* ── 首页：热榜 ── */}
         {!loading && newsItems.length === 0 && !searchError && (
-          <div className="animate-fade-in text-center py-20">
-            <h1 className="text-display text-text-primary mb-4">
-              全球资讯，一搜即得
-            </h1>
-            <p className="text-body text-text-secondary max-w-md mx-auto">
-              在上方输入关键词，搜索全球新闻、开源项目、股票信息
-            </p>
+          <div className="max-w-2xl mx-auto">
+            <TrendingBoard onSearch={(keyword) => handleSearch(keyword)} />
           </div>
         )}
 
