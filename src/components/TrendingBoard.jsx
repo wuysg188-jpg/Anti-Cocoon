@@ -2,16 +2,17 @@
  * TrendingBoard.jsx — 每日热榜组件
  * 
  * 功能：
- * - 显示各分类热门新闻
+ * - 显示各分类热门新闻/项目
  * - 支持排名和热度显示
- * - 点击可搜索相关关键词
+ * - 点击搜索相关新闻
+ * - 包含科技、财经、汽车、国际、GitHub、HuggingFace
  */
 
-import { useState, useEffect } from 'react';
-import { TrendingUp, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { TrendingUp, Github, BrainCircuit } from 'lucide-react';
 
 // 热门话题分类
-const TRENDING_CATEGORIES = [
+const TRENDING_DATA = [
   {
     id: 'tech',
     name: '科技',
@@ -21,7 +22,7 @@ const TRENDING_CATEGORIES = [
       { rank: 1, title: 'ChatGPT', hot: 987 },
       { rank: 2, title: '人工智能', hot: 856 },
       { rank: 3, title: '芯片半导体', hot: 743 },
-      { rank: 4, title: '苹果', hot: 698 },
+      { rank: 4, title: '苹果 iPhone', hot: 698 },
       { rank: 5, title: '华为', hot: 654 },
     ],
   },
@@ -31,10 +32,10 @@ const TRENDING_CATEGORIES = [
     icon: '💰',
     color: '#10b981',
     items: [
-      { rank: 1, title: 'A股', hot: 923 },
+      { rank: 1, title: 'A股行情', hot: 923 },
       { rank: 2, title: '比特币', hot: 876 },
       { rank: 3, title: '央行利率', hot: 765 },
-      { rank: 4, title: '茅台', hot: 654 },
+      { rank: 4, title: '茅台股价', hot: 654 },
       { rank: 5, title: '房地产', hot: 598 },
     ],
   },
@@ -64,30 +65,58 @@ const TRENDING_CATEGORIES = [
       { rank: 5, title: '俄乌战争', hot: 598 },
     ],
   },
+  {
+    id: 'github',
+    name: 'GitHub',
+    icon: '⭐',
+    color: '#8b5cf6',
+    items: [
+      { rank: 1, title: 'ChatGPT', hot: '120k', url: 'https://github.com/search?q=ChatGPT' },
+      { rank: 2, title: 'React', hot: '218k', url: 'https://github.com/facebook/react' },
+      { rank: 3, title: 'Vue.js', hot: '206k', url: 'https://github.com/vuejs/core' },
+      { rank: 4, title: 'TensorFlow', hot: '183k', url: 'https://github.com/tensorflow/tensorflow' },
+      { rank: 5, title: 'Python', hot: '168k', url: 'https://github.com/python/cpython' },
+    ],
+  },
+  {
+    id: 'huggingface',
+    name: 'HuggingFace',
+    icon: '🤗',
+    color: '#ec4899',
+    items: [
+      { rank: 1, title: 'LLaMA', hot: '10M', url: 'https://huggingface.co/meta-llama' },
+      { rank: 2, title: 'Stable Diffusion', hot: '8M', url: 'https://huggingface.co/runwayml/stable-diffusion-v1-5' },
+      { rank: 3, title: 'BERT', hot: '5M', url: 'https://huggingface.co/bert-base-uncased' },
+      { rank: 4, title: 'Whisper', hot: '4M', url: 'https://huggingface.co/openai/whisper-large-v3' },
+      { rank: 5, title: 'GPT-2', hot: '3M', url: 'https://huggingface.co/gpt2' },
+    ],
+  },
 ];
 
 export default function TrendingBoard({ onSearch }) {
   const [activeCategory, setActiveCategory] = useState('tech');
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState(TRENDING_CATEGORIES);
 
   // 获取当前分类的数据
-  const currentCategory = data.find(c => c.id === activeCategory) || data[0];
+  const currentCategory = TRENDING_DATA.find(c => c.id === activeCategory) || TRENDING_DATA[0];
+
+  // 处理点击
+  const handleClick = (item) => {
+    if (onSearch) {
+      onSearch(item.title);
+    }
+  };
 
   return (
     <div className="animate-fade-in">
       {/* 标题 */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <TrendingUp size={16} className="text-accent" />
-          <h2 className="text-subheading text-text-primary">每日热榜</h2>
-        </div>
-        <span className="text-caption text-text-tertiary">实时更新</span>
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp size={16} className="text-accent" />
+        <h2 className="text-subheading text-text-primary">每日热榜</h2>
       </div>
 
       {/* 分类标签 */}
       <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-2">
-        {data.map((category) => (
+        {TRENDING_DATA.map((category) => (
           <button
             key={category.id}
             onClick={() => setActiveCategory(category.id)}
@@ -106,8 +135,8 @@ export default function TrendingBoard({ onSearch }) {
         {currentCategory.items.map((item, idx) => (
           <button
             key={idx}
-            onClick={() => onSearch && onSearch(item.title)}
-            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-bg-hover transition-colors border-b border-bg-border last:border-b-0 text-left"
+            onClick={() => handleClick(item)}
+            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-bg-hover transition-colors border-b border-bg-border last:border-b-0 text-left group"
           >
             {/* 排名 */}
             <span className={`text-lg font-bold min-w-[24px] text-center ${
@@ -120,15 +149,22 @@ export default function TrendingBoard({ onSearch }) {
             </span>
 
             {/* 标题 */}
-            <span className="flex-1 text-sm text-text-primary truncate">
+            <span className="flex-1 text-sm text-text-primary group-hover:text-accent transition-colors truncate">
               {item.title}
             </span>
+
+            {/* 分类标识 */}
+            {(activeCategory === 'github' || activeCategory === 'huggingface') && (
+              <span className="text-xs text-text-tertiary">
+                {activeCategory === 'github' ? <Github size={12} /> : <BrainCircuit size={12} />}
+              </span>
+            )}
 
             {/* 热度 */}
             <span className={`text-xs ${
               idx < 3 ? 'text-red-500 font-medium' : 'text-text-tertiary'
             }`}>
-              {item.hot}万
+              {typeof item.hot === 'number' ? `${item.hot}万` : item.hot}
             </span>
           </button>
         ))}
